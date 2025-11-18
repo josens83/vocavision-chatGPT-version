@@ -11,6 +11,8 @@ import wordRoutes from './routes/word.routes';
 import learningRoutes from './routes/learning.routes';
 import progressRoutes from './routes/progress.routes';
 import subscriptionRoutes from './routes/subscription.routes';
+import bookmarkRoutes from './routes/bookmark.routes';
+import goalsRoutes from './routes/goals.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -46,6 +48,8 @@ app.use('/api/words', wordRoutes);
 app.use('/api/learning', learningRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/goals', goalsRoutes);
 
 // Error handling
 app.use(errorHandler);

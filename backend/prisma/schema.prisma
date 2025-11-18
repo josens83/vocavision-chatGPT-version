@@ -38,12 +38,18 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Daily Goals
+  dailyGoal     Int       @default(10) // Daily word goal
+  dailyProgress Int       @default(0)  // Words studied today
+  lastGoalReset DateTime?
+
   // Relations
   progress      UserProgress[]
   reviews       Review[]
   customMnemonics CustomMnemonic[]
   studySessions StudySession[]
   achievements  UserAchievement[]
+  bookmarks     Bookmark[]
 
   @@index([email])
 }
@@ -426,4 +432,22 @@ model Collection {
 
   @@index([category])
   @@index([difficulty])
+}
+
+// ============================================
+// Bookmarks & Favorites
+// ============================================
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  wordId    String
+  notes     String?  // Personal notes
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, wordId])
+  @@index([userId])
+  @@index([wordId])
 }

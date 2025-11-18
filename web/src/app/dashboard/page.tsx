@@ -127,12 +127,20 @@ export default function DashboardPage() {
                 {dueReviews.count}개의 단어가 복습을 기다리고 있어요
               </p>
             </div>
-            <Link
-              href="/learn"
-              className="inline-block bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
-            >
-              학습 시작하기
-            </Link>
+            <div className="flex gap-3">
+              <Link
+                href="/learn"
+                className="inline-block bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
+              >
+                학습 시작
+              </Link>
+              <Link
+                href="/quiz"
+                className="inline-block bg-blue-400 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-300 transition"
+              >
+                퀴즈 풀기
+              </Link>
+            </div>
           </div>
 
           {/* Subscription Status */}
@@ -169,6 +177,25 @@ export default function DashboardPage() {
               </Link>
             )}
           </div>
+        </div>
+
+        {/* Quick Links */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <Link href="/words" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="text-4xl mb-3">📖</div>
+            <h3 className="text-lg font-bold mb-1">단어 탐색</h3>
+            <p className="text-sm text-gray-600">모든 단어 검색 및 학습</p>
+          </Link>
+          <Link href="/quiz" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="text-4xl mb-3">🎯</div>
+            <h3 className="text-lg font-bold mb-1">퀴즈 모드</h3>
+            <p className="text-sm text-gray-600">실력을 테스트하세요</p>
+          </Link>
+          <Link href="/statistics" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="text-4xl mb-3">📊</div>
+            <h3 className="text-lg font-bold mb-1">상세 통계</h3>
+            <p className="text-sm text-gray-600">학습 진행 상황 확인</p>
+          </Link>
         </div>
 
         {/* Learning Methods */}
