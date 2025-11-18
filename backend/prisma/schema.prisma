@@ -1,0 +1,429 @@
+// Prisma Schema for VocaVision
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User Management
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  name          String?
+  avatar        String?
+  role          UserRole  @default(USER)
+
+  // Subscription
+  subscriptionStatus SubscriptionStatus @default(FREE)
+  subscriptionId     String?
+  subscriptionPlan   SubscriptionPlan?
+  subscriptionStart  DateTime?
+  subscriptionEnd    DateTime?
+  trialEnd          DateTime?
+
+  // Learning Stats
+  totalWordsLearned Int @default(0)
+  currentStreak     Int @default(0)
+  longestStreak     Int @default(0)
+  lastActiveDate    DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  progress      UserProgress[]
+  reviews       Review[]
+  customMnemonics CustomMnemonic[]
+  studySessions StudySession[]
+  achievements  UserAchievement[]
+
+  @@index([email])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum SubscriptionStatus {
+  FREE
+  TRIAL
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  YEARLY
+  FAMILY
+}
+
+// ============================================
+// Vocabulary
+// ============================================
+
+model Word {
+  id          String   @id @default(uuid())
+  word        String   @unique
+  definition  String
+  pronunciation String?
+  phonetic    String?
+  partOfSpeech PartOfSpeech
+  difficulty  DifficultyLevel @default(INTERMEDIATE)
+  frequency   Int      @default(0) // Word frequency ranking
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  examples    Example[]
+  images      WordImage[]
+  videos      WordVideo[]
+  rhymes      Rhyme[]
+  mnemonics   Mnemonic[]
+  etymology   Etymology?
+  synonyms    Synonym[]
+  antonyms    Antonym[]
+  progress    UserProgress[]
+
+  @@index([word])
+  @@index([difficulty])
+  @@index([frequency])
+}
+
+enum PartOfSpeech {
+  NOUN
+  VERB
+  ADJECTIVE
+  ADVERB
+  PRONOUN
+  PREPOSITION
+  CONJUNCTION
+  INTERJECTION
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+// ============================================
+// Learning Methods
+// ============================================
+
+// 1. Examples
+model Example {
+  id        String   @id @default(uuid())
+  wordId    String
+  sentence  String
+  translation String? // 한국어 번역
+  audioUrl  String?
+
+  word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+// 2. Images
+model WordImage {
+  id          String   @id @default(uuid())
+  wordId      String
+  imageUrl    String
+  thumbnailUrl String?
+  description String?
+  source      ImageSource @default(AI_GENERATED)
+  aiPrompt    String?  // AI 생성 이미지의 프롬프트
+
+  createdAt   DateTime @default(now())
+
+  word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+enum ImageSource {
+  AI_GENERATED
+  STOCK_PHOTO
+  ILLUSTRATION
+  USER_UPLOADED
+}
+
+// 3. Videos/Animations
+model WordVideo {
+  id          String   @id @default(uuid())
+  wordId      String
+  videoUrl    String
+  thumbnailUrl String?
+  duration    Int?     // Duration in seconds
+  type        VideoType @default(ANIMATION)
+  description String?
+
+  createdAt   DateTime @default(now())
+
+  word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+enum VideoType {
+  ANIMATION
+  LIVE_ACTION
+  WHITEBOARD
+  MOTION_GRAPHICS
+}
+
+// 4. Rhyming
+model Rhyme {
+  id          String   @id @default(uuid())
+  wordId      String
+  rhymingWord String
+  similarity  Float    // 0.0 ~ 1.0 (유사도)
+  example     String?  // 예문으로 함께 사용
+
+  word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+// 5. Mnemonics (연상법)
+model Mnemonic {
+  id          String   @id @default(uuid())
+  wordId      String
+  title       String
+  content     String
+  koreanHint  String?  // 한국어 연상 힌트
+  imageUrl    String?
+  source      MnemonicSource @default(AI_GENERATED)
+  rating      Float    @default(0)
+  ratingCount Int      @default(0)
+
+  createdAt   DateTime @default(now())
+
+  word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+  @@index([rating])
+}
+
+enum MnemonicSource {
+  AI_GENERATED
+  EXPERT_CREATED
+  COMMUNITY
+}
+
+// User-created mnemonics
+model CustomMnemonic {
+  id        String   @id @default(uuid())
+  userId    String
+  wordId    String
+  content   String
+  isPrivate Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([wordId])
+}
+
+// 6. Etymology (어원)
+model Etymology {
+  id          String   @id @default(uuid())
+  wordId      String   @unique
+  origin      String
+  rootWords   String[] // Array of root words
+  evolution   String   // 단어의 발전 과정
+  relatedWords String[] // 같은 어원을 가진 단어들
+
+  word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+}
+
+// 7. Synonyms & Antonyms
+model Synonym {
+  id        String   @id @default(uuid())
+  wordId    String
+  synonym   String
+  nuance    String?  // 뉘앙스 차이 설명
+
+  word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+model Antonym {
+  id        String   @id @default(uuid())
+  wordId    String
+  antonym   String
+  explanation String?
+
+  word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+// ============================================
+// Learning Progress & Spaced Repetition
+// ============================================
+
+model UserProgress {
+  id              String   @id @default(uuid())
+  userId          String
+  wordId          String
+
+  // Spaced Repetition (SM-2 Algorithm)
+  easeFactor      Float    @default(2.5)
+  interval        Int      @default(1)  // Days until next review
+  repetitions     Int      @default(0)
+  nextReviewDate  DateTime
+  lastReviewDate  DateTime?
+
+  // Progress
+  masteryLevel    MasteryLevel @default(NEW)
+  correctCount    Int      @default(0)
+  incorrectCount  Int      @default(0)
+  totalReviews    Int      @default(0)
+
+  // Learning methods used
+  usedImages      Boolean  @default(false)
+  usedVideos      Boolean  @default(false)
+  usedRhymes      Boolean  @default(false)
+  usedMnemonics   Boolean  @default(false)
+  usedEtymology   Boolean  @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  word            Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, wordId])
+  @@index([userId])
+  @@index([nextReviewDate])
+}
+
+enum MasteryLevel {
+  NEW
+  LEARNING
+  FAMILIAR
+  MASTERED
+}
+
+// ============================================
+// Study Sessions & Reviews
+// ============================================
+
+model StudySession {
+  id            String   @id @default(uuid())
+  userId        String
+  startTime     DateTime @default(now())
+  endTime       DateTime?
+  duration      Int?     // Duration in seconds
+  wordsStudied  Int      @default(0)
+  wordsCorrect  Int      @default(0)
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews       Review[]
+
+  @@index([userId])
+  @@index([startTime])
+}
+
+model Review {
+  id              String   @id @default(uuid())
+  userId          String
+  wordId          String
+  sessionId       String?
+
+  rating          Int      // 1-5 (1: Again, 2: Hard, 3: Good, 4: Easy, 5: Perfect)
+  responseTime    Int?     // Response time in milliseconds
+  learningMethod  LearningMethod
+
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session         StudySession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+enum LearningMethod {
+  FLASHCARD
+  IMAGE
+  VIDEO
+  RHYME
+  MNEMONIC
+  ETYMOLOGY
+  QUIZ
+  WRITING
+}
+
+// ============================================
+// Gamification & Achievements
+// ============================================
+
+model Achievement {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  icon        String
+  requirement Int      // Required value to unlock
+  type        AchievementType
+
+  users       UserAchievement[]
+}
+
+enum AchievementType {
+  WORDS_LEARNED
+  DAILY_STREAK
+  PERFECT_REVIEWS
+  METHODS_USED
+  STUDY_TIME
+}
+
+model UserAchievement {
+  id            String   @id @default(uuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+// ============================================
+// Content Collections
+// ============================================
+
+model Collection {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  category    String
+  difficulty  DifficultyLevel
+  isPublic    Boolean  @default(true)
+
+  wordIds     String[] // Array of word IDs
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([difficulty])
+}
