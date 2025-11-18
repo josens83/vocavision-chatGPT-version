@@ -286,6 +286,57 @@ export const endStudySession = async (
   }
 };
 
+export const getReviewHistory = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.userId!;
+
+    const reviews = await prisma.review.findMany({
+      where: { userId },
+      include: {
+        word: {
+          select: {
+            word: true,
+            definition: true,
+            difficulty: true,
+          },
+        },
+      },
+      orderBy: { reviewedAt: 'desc' },
+      take: 200, // Limit to last 200 reviews
+    });
+
+    // Add nextReviewDate from UserProgress
+    const reviewsWithNextDate = await Promise.all(
+      reviews.map(async (review) => {
+        const progress = await prisma.userProgress.findUnique({
+          where: {
+            userId_wordId: {
+              userId,
+              wordId: review.wordId,
+            },
+          },
+          select: {
+            nextReviewDate: true,
+          },
+        });
+
+        return {
+          ...review,
+          nextReviewDate: progress?.nextReviewDate || new Date(),
+        };
+      })
+    );
+
+    res.json({ reviews: reviewsWithNextDate });
+  } catch (error) {
+    next(error);
+  }
+};
+
 async function updateUserStats(userId: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

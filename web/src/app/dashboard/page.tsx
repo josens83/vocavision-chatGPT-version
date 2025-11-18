@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { progressAPI, authAPI } from '@/lib/api';
+import DailyGoalWidget from '@/components/dashboard/DailyGoalWidget';
 
 interface UserStats {
   totalWordsLearned: number;
@@ -20,7 +21,6 @@ interface DueReview {
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
 
   const [stats, setStats] = useState<UserStats | null>(null);
   const [dueReviews, setDueReviews] = useState<DueReview>({ count: 0 });
@@ -52,11 +52,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.push('/');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -70,15 +65,22 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-blue-600">VocaVision</h1>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-700">{user?.email}</span>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-gray-600 hover:text-gray-900"
-            >
-              로그아웃
-            </button>
+          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
+            VocaVision
+          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/words" className="text-gray-600 hover:text-blue-600 transition">
+              단어
+            </Link>
+            <Link href="/bookmarks" className="text-gray-600 hover:text-blue-600 transition">
+              북마크
+            </Link>
+            <Link href="/statistics" className="text-gray-600 hover:text-blue-600 transition">
+              통계
+            </Link>
+            <Link href="/settings" className="text-gray-600 hover:text-blue-600 transition">
+              설정
+            </Link>
           </div>
         </div>
       </header>
@@ -118,7 +120,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
           {/* Start Learning */}
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
             <div className="mb-4">
@@ -142,6 +144,9 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
+
+          {/* Daily Goal Widget */}
+          <DailyGoalWidget />
 
           {/* Subscription Status */}
           <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
@@ -180,7 +185,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Links */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Link href="/words" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
             <div className="text-4xl mb-3">📖</div>
             <h3 className="text-lg font-bold mb-1">단어 탐색</h3>
@@ -191,10 +196,25 @@ export default function DashboardPage() {
             <h3 className="text-lg font-bold mb-1">퀴즈 모드</h3>
             <p className="text-sm text-gray-600">실력을 테스트하세요</p>
           </Link>
+          <Link href="/bookmarks" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="text-4xl mb-3">⭐</div>
+            <h3 className="text-lg font-bold mb-1">북마크</h3>
+            <p className="text-sm text-gray-600">저장한 단어 모음</p>
+          </Link>
+          <Link href="/history" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="text-4xl mb-3">📚</div>
+            <h3 className="text-lg font-bold mb-1">학습 기록</h3>
+            <p className="text-sm text-gray-600">복습 내역 확인</p>
+          </Link>
           <Link href="/statistics" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
             <div className="text-4xl mb-3">📊</div>
             <h3 className="text-lg font-bold mb-1">상세 통계</h3>
             <p className="text-sm text-gray-600">학습 진행 상황 확인</p>
+          </Link>
+          <Link href="/settings" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="text-4xl mb-3">⚙️</div>
+            <h3 className="text-lg font-bold mb-1">설정</h3>
+            <p className="text-sm text-gray-600">프로필 및 환경설정</p>
           </Link>
         </div>
 
