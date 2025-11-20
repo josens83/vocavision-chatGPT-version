@@ -130,7 +130,8 @@ npm start
 #### DevOps
 - **Containerization**: Docker + Docker Compose
 - **Deployment**: Nginx (reverse proxy)
-- **CI/CD**: GitHub Actions (준비 중)
+- **CI/CD**: GitHub Actions
+- **Testing**: Jest (Unit) + Playwright (E2E)
 
 ### 프로젝트 구조
 
@@ -266,6 +267,39 @@ vocavision/
 ✅ 우선 고객 지원
 ✅ 광고 없음
 
+## 🧪 테스트
+
+### 백엔드 유닛 테스트 (Jest)
+
+```bash
+cd backend
+npm test                    # 테스트 실행
+npm test -- --coverage      # 커버리지 포함
+npm test -- --watch         # Watch 모드
+```
+
+**테스트 커버리지:**
+- Auth Controller: 회원가입, 로그인, 프로필 (7 tests)
+- Word Controller: 단어 조회, 검색, 생성 (7 tests)
+- Progress Controller: 진행도, 복습, 세션 (8 tests)
+- Middleware: 인증, 구독 검증 (9 tests)
+
+### 프론트엔드 E2E 테스트 (Playwright)
+
+```bash
+cd web
+npm run test:e2e           # 헤드리스 모드
+npm run test:e2e:ui        # UI 모드 (인터랙티브)
+npm run test:e2e:headed    # 브라우저 표시
+```
+
+**테스트 시나리오:**
+- Authentication: 회원가입, 로그인, 보호된 라우트 (10 tests)
+- Learning Flow: 복습 세션, 플래시카드, 새 단어 (8 tests)
+- Dashboard: 통계, 네비게이션, 반응형 (15 tests)
+
+**지원 브라우저:** Chrome, Firefox, Safari, Mobile Chrome, Mobile Safari
+
 ## 🛠️ 개발
 
 ### 필수 조건
@@ -398,6 +432,7 @@ npm run web
 
 ### ✅ 완료된 기능
 
+#### 핵심 기능
 - [x] 사용자 인증 (회원가입, 로그인)
 - [x] 101개 단어 데이터베이스 (4개 컬렉션)
 - [x] 플래시카드 학습 시스템
@@ -412,9 +447,16 @@ npm run web
 - [x] 설정 페이지
 - [x] 랜딩 페이지 (마케팅 콘텐츠 포함)
 - [x] 가격 페이지
-- [x] Docker 배포 (Nginx 포함)
 - [x] 알림/리마인더 시스템
-- [x] Swagger API 문서화
+
+#### 인프라 & DevOps
+- [x] Docker 배포 (Nginx 포함)
+- [x] Swagger API 문서화 (40+ endpoints)
+- [x] Jest 유닛 테스트 (31 tests)
+- [x] Playwright E2E 테스트 (33 tests)
+- [x] GitHub Actions CI/CD 파이프라인
+- [x] 자동화된 빌드 & 테스트
+- [x] 보안 취약점 스캔 (Trivy)
 - [x] 포괄적인 문서
 
 ### 🔄 진행 중
