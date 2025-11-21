@@ -212,6 +212,11 @@ export default function DashboardPage() {
             <h3 className="text-lg font-bold mb-1">단어 탐색</h3>
             <p className="text-sm text-gray-600">모든 단어 검색 및 학습</p>
           </Link>
+          <Link href="/games" className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-2xl p-6 hover:shadow-lg transition">
+            <div className="text-4xl mb-3">🎮</div>
+            <h3 className="text-lg font-bold mb-1">학습 게임</h3>
+            <p className="text-sm text-purple-100">Match, True/False, Write 모드</p>
+          </Link>
           <Link href="/collections" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
             <div className="text-4xl mb-3">📚</div>
             <h3 className="text-lg font-bold mb-1">컬렉션</h3>
