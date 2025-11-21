@@ -118,3 +118,81 @@ export const subscriptionAPI = {
     return response.data;
   },
 };
+
+// Decks API - Anki-style custom deck system (Phase 2-1)
+export const decksAPI = {
+  // Get all decks (user's own and public decks)
+  getDecks: async (params?: { page?: number; limit?: number; isPublic?: boolean }) => {
+    const response = await api.get('/decks', { params });
+    return response.data;
+  },
+
+  // Get a specific deck by ID
+  getDeckById: async (id: string) => {
+    const response = await api.get(`/decks/${id}`);
+    return response.data;
+  },
+
+  // Create a new deck
+  createDeck: async (data: {
+    name: string;
+    description?: string;
+    isPublic?: boolean;
+    tags?: string[];
+  }) => {
+    const response = await api.post('/decks', data);
+    return response.data;
+  },
+
+  // Update a deck
+  updateDeck: async (id: string, data: {
+    name?: string;
+    description?: string;
+    isPublic?: boolean;
+    tags?: string[];
+  }) => {
+    const response = await api.put(`/decks/${id}`, data);
+    return response.data;
+  },
+
+  // Delete a deck
+  deleteDeck: async (id: string) => {
+    const response = await api.delete(`/decks/${id}`);
+    return response.data;
+  },
+
+  // Get words in a deck
+  getDeckWords: async (deckId: string) => {
+    const response = await api.get(`/decks/${deckId}/words`);
+    return response.data;
+  },
+
+  // Add a word to a deck
+  addWordToDeck: async (deckId: string, wordId: string) => {
+    const response = await api.post(`/decks/${deckId}/words`, { wordId });
+    return response.data;
+  },
+
+  // Remove a word from a deck
+  removeWordFromDeck: async (deckId: string, wordId: string) => {
+    const response = await api.delete(`/decks/${deckId}/words/${wordId}`);
+    return response.data;
+  },
+
+  // Clone a public deck
+  cloneDeck: async (deckId: string) => {
+    const response = await api.post(`/decks/${deckId}/clone`);
+    return response.data;
+  },
+
+  // Get public/community decks
+  getPublicDecks: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    tags?: string[];
+  }) => {
+    const response = await api.get('/decks/public', { params });
+    return response.data;
+  },
+};
