@@ -7,7 +7,7 @@
  * @module services/emailService
  */
 
-import logger from '../utils/logger';
+import { logger } from '../utils/logger';
 
 export interface EmailOptions {
   to: string | string[];
@@ -96,6 +96,23 @@ class EmailService {
    * Send with SendGrid
    */
   private async sendWithSendGrid(options: EmailOptions): Promise<void> {
+    // TODO: Implement SendGrid integration
+    /*
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+    await sgMail.send({
+      to: options.to,
+      from: options.from,
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+      cc: options.cc,
+      bcc: options.bcc,
+      replyTo: options.replyTo,
+      attachments: options.attachments,
+    });
+    */
     this.logEmail(options);
   }
 
@@ -103,6 +120,38 @@ class EmailService {
    * Send with AWS SES
    */
   private async sendWithSES(options: EmailOptions): Promise<void> {
+    // TODO: Implement AWS SES integration
+    /*
+    const AWS = require('aws-sdk');
+    const ses = new AWS.SES({
+      region: process.env.AWS_SES_REGION,
+    });
+
+    const params = {
+      Source: options.from,
+      Destination: {
+        ToAddresses: Array.isArray(options.to) ? options.to : [options.to],
+        CcAddresses: options.cc,
+        BccAddresses: options.bcc,
+      },
+      Message: {
+        Subject: {
+          Data: options.subject,
+        },
+        Body: {
+          Html: {
+            Data: options.html || '',
+          },
+          Text: {
+            Data: options.text || '',
+          },
+        },
+      },
+      ReplyToAddresses: options.replyTo ? [options.replyTo] : [],
+    };
+
+    await ses.sendEmail(params).promise();
+    */
     this.logEmail(options);
   }
 
@@ -110,6 +159,32 @@ class EmailService {
    * Send with Nodemailer
    */
   private async sendWithNodemailer(options: EmailOptions): Promise<void> {
+    // TODO: Implement Nodemailer integration
+    /*
+    const nodemailer = require('nodemailer');
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
+      },
+    });
+
+    await transporter.sendMail({
+      from: options.from,
+      to: options.to,
+      subject: options.subject,
+      text: options.text,
+      html: options.html,
+      cc: options.cc,
+      bcc: options.bcc,
+      replyTo: options.replyTo,
+      attachments: options.attachments,
+    });
+    */
     this.logEmail(options);
   }
 
@@ -161,7 +236,7 @@ class EmailService {
     return this.sendTemplateEmail(
       {
         name: 'welcome',
-        subject: 'Welcome to VocaVision!',
+        subject: 'Welcome to VocaVision! 🎉',
         html: `
           <h1>Welcome to VocaVision, {{name}}!</h1>
           <p>We're excited to have you on board.</p>
@@ -211,10 +286,10 @@ class EmailService {
     return this.sendTemplateEmail(
       {
         name: 'streak-reminder',
-        subject: `Don't break your ${streak}-day streak!`,
+        subject: `Don't break your ${streak}-day streak! 🔥`,
         html: `
           <h1>Hi {{name}}!</h1>
-          <p>You're on a <strong>{{streak}}-day streak</strong>!</p>
+          <p>You're on a <strong>{{streak}}-day streak</strong>! 🔥</p>
           <p>Study today to keep it going.</p>
           <a href="https://vocavision.com/learn">Continue Learning</a>
         `,

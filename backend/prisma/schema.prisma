@@ -383,6 +383,7 @@ enum LearningMethod {
   ETYMOLOGY
   QUIZ
   WRITING
+  INTERACTIVE_DOC  // n8n-style interactive documentation
 }
 
 // ============================================
@@ -493,37 +494,59 @@ enum NotificationType {
 }
 
 // ============================================
-// AI Chat
+// Interactive Documentation Progress
 // ============================================
 
-model ChatConversation {
-  id          String   @id @default(uuid())
-  userId      String
-  title       String   @default("새 대화")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  messages    ChatMessage[]
-
-  @@index([userId])
-  @@index([updatedAt])
-}
-
-model ChatMessage {
+model InteractiveDocProgress {
   id              String   @id @default(uuid())
-  conversationId  String
-  role            ChatRole
-  content         String
-  wordId          String?  // Related word if any
+  userId          String
+  wordId          String
+  stepId          String   // Step identifier (step-introduction, step-visualization, etc.)
+  stepNumber      Int      // 1-5
+
+  // Progress tracking
+  started         Boolean  @default(false)
+  completed       Boolean  @default(false)
+  timeSpent       Int      @default(0)  // Total time spent in seconds
+  interactions    Int      @default(0)  // Number of user interactions
+  score           Float?   // Quiz/exercise score (0-100)
+
+  // Timestamps
+  startedAt       DateTime?
+  completedAt     DateTime?
+  lastInteraction DateTime @default(now())
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId])
-  @@index([createdAt])
+  @@unique([userId, wordId, stepId])
+  @@index([userId])
+  @@index([wordId])
+  @@index([userId, wordId])
+  @@index([completed])
 }
 
-enum ChatRole {
-  USER
-  ASSISTANT
+// Word completion tracking for interactive docs
+model InteractiveDocCompletion {
+  id              String   @id @default(uuid())
+  userId          String
+  wordId          String
+
+  // Completion stats
+  stepsCompleted  Int      @default(0)  // Number of steps completed (0-5)
+  totalSteps      Int      @default(5)  // Total number of steps
+  totalTimeSpent  Int      @default(0)  // Total time spent in seconds
+  averageScore    Float?   // Average quiz/exercise score
+  completionRate  Float    @default(0)  // Percentage (0-100)
+
+  // Status
+  isCompleted     Boolean  @default(false)
+  completedAt     DateTime?
+  lastAccessedAt  DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, wordId])
+  @@index([userId])
+  @@index([wordId])
+  @@index([isCompleted])
 }
