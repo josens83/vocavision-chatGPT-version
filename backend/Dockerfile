@@ -1,4 +1,5 @@
 # Backend Dockerfile
+# Build context: repository root (not backend directory)
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
@@ -6,9 +7,9 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
-COPY prisma ./prisma/
+# Copy package files from backend directory
+COPY backend/package.json ./
+COPY backend/prisma ./prisma/
 
 # Install ALL dependencies (including dev for TypeScript build)
 RUN npm install
@@ -17,7 +18,7 @@ RUN npm install
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY backend/ .
 
 # Generate Prisma Client
 RUN npx prisma generate
@@ -37,7 +38,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 vocavision
 
 # Copy package.json for production install
-COPY package.json ./
+COPY backend/package.json ./
 
 # Install production dependencies only
 RUN npm install --omit=dev
