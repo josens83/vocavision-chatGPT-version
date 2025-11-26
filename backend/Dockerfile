@@ -10,8 +10,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (using npm install for monorepo compatibility)
+RUN npm install --omit=dev
 
 # Rebuild the source code only when needed
 FROM base AS builder
