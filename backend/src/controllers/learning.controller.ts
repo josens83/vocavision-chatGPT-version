@@ -1,12 +1,23 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import OpenAI from 'openai';
 import { prisma } from '../index';
 import { AppError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization of OpenAI client
+let openai: OpenAI | null = null;
+
+const getOpenAIClient = (): OpenAI => {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new AppError('OpenAI API key not configured', 500);
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+};
 
 export const getLearningMethods = async (
   req: AuthRequest,
@@ -83,7 +94,7 @@ Please provide:
 
 Make it fun and easy to remember!`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -143,7 +154,7 @@ export const generateImage = async (
 
     const prompt = `A clear, simple illustration representing the word "${word.word}" meaning "${word.definition}". Educational style, easy to understand.`;
 
-    const image = await openai.images.generate({
+    const image = await getOpenAIClient().images.generate({
       model: 'dall-e-3',
       prompt,
       n: 1,
