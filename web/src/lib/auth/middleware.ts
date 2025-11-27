@@ -9,7 +9,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify, SignJWT } from 'jose';
-import prisma from '@/lib/prisma';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'vocavision-super-secret-jwt-key-min-32-characters-long-for-security'
@@ -228,24 +227,25 @@ export function requireRole(
 }
 
 /**
- * Get current user from database
+ * Get current user from backend API
+ * Note: This should call the backend API instead of direct database access
  */
 export async function getCurrentUser(userId: string) {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        subscriptionStatus: true,
-        subscriptionPlan: true,
-        subscriptionEnd: true,
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    const response = await fetch(`${apiUrl}/users/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
       },
     });
 
-    return user;
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.user || data;
   } catch (error) {
     console.error('Get current user error:', error);
     return null;
