@@ -3,9 +3,9 @@
   "version": 2,
   "name": "vocavision",
   "framework": "nextjs",
-  "installCommand": "cd web && npm install",
-  "buildCommand": "cd web && npm run build",
-  "outputDirectory": "web/.next",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
   "env": {
     "NEXT_PUBLIC_API_URL": "https://vocavisionbackend-production.up.railway.app/api"
   },
