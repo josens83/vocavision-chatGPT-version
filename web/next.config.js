@@ -43,7 +43,7 @@ const nextConfig = {
 
   // Experimental features for better performance
   experimental: {
-    optimizeCss: true, // Enable CSS optimization
+    // optimizeCss requires 'critters' package - disabled for now
     optimizePackageImports: ['framer-motion', 'axios', 'date-fns'], // Optimize specific packages
   },
 
