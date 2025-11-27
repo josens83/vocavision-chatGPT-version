@@ -52,6 +52,8 @@ model User {
   achievements  UserAchievement[]
   bookmarks     Bookmark[]
   notifications Notification[]
+  decks         Deck[]
+  leagueMemberships LeagueMembership[]
 
   // Notification Preferences
   emailNotifications    Boolean @default(true)
@@ -430,6 +432,7 @@ model Collection {
   id          String   @id @default(uuid())
   name        String
   description String?
+  icon        String?
   category    String
   difficulty  DifficultyLevel
   isPublic    Boolean  @default(true)
@@ -441,6 +444,32 @@ model Collection {
 
   @@index([category])
   @@index([difficulty])
+}
+
+// ============================================
+// Custom Decks (Anki-style)
+// ============================================
+
+model Deck {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  isPublic    Boolean  @default(false)
+  tags        String[] // Array of tags
+  wordIds     String[] // Array of word IDs
+
+  // Cloning info
+  clonedFromId String?
+  cloneCount   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isPublic])
 }
 
 // ============================================
@@ -549,4 +578,72 @@ model InteractiveDocCompletion {
   @@index([userId])
   @@index([wordId])
   @@index([isCompleted])
+}
+
+// ============================================
+// League System (Duolingo-style)
+// ============================================
+
+enum LeagueTier {
+  BRONZE
+  SILVER
+  GOLD
+  SAPPHIRE
+  RUBY
+  EMERALD
+  AMETHYST
+  PEARL
+  OBSIDIAN
+  DIAMOND
+}
+
+model League {
+  id            String      @id @default(uuid())
+  tier          LeagueTier
+  weekStart     DateTime    // Monday of the week
+  weekEnd       DateTime    // Sunday of the week
+
+  // Zone settings
+  promotionZone Int         @default(10)  // Top N get promoted
+  demotionZone  Int         @default(5)   // Bottom N get demoted
+
+  createdAt     DateTime    @default(now())
+
+  memberships   LeagueMembership[]
+
+  @@unique([tier, weekStart])
+  @@index([tier])
+  @@index([weekStart])
+}
+
+model LeagueMembership {
+  id          String      @id @default(uuid())
+  userId      String
+  leagueId    String
+
+  // XP earned this week
+  weeklyXP    Int         @default(0)
+
+  // Final rank at end of week (null until week ends)
+  finalRank   Int?
+
+  // Result (after week ends)
+  result      LeagueResult?
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  league      League      @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, leagueId])
+  @@index([userId])
+  @@index([leagueId])
+  @@index([weeklyXP])
+}
+
+enum LeagueResult {
+  PROMOTED
+  STAYED
+  DEMOTED
 }

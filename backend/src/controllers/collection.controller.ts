@@ -8,19 +8,48 @@ export const getAllCollections = async (
   next: NextFunction
 ) => {
   try {
+    const userId = req.userId;
+
     const collections = await prisma.collection.findMany({
       where: { isPublic: true },
       orderBy: { createdAt: 'asc' },
     });
 
-    // Add word count based on wordIds array
-    const collectionsWithProgress = collections.map((collection) => ({
-      ...collection,
-      wordCount: collection.wordIds?.length || 0,
-      progressCount: 0,
-      masteredCount: 0,
-      progressPercentage: 0,
-    }));
+    // Calculate progress for each collection if user is logged in
+    const collectionsWithProgress = await Promise.all(
+      collections.map(async (collection) => {
+        const wordCount = collection.wordIds?.length || 0;
+        let progressCount = 0;
+        let masteredCount = 0;
+
+        if (userId && wordCount > 0) {
+          // Get user's progress for words in this collection
+          const userProgress = await prisma.userProgress.findMany({
+            where: {
+              userId,
+              wordId: { in: collection.wordIds || [] },
+            },
+          });
+
+          progressCount = userProgress.length;
+          masteredCount = userProgress.filter(
+            (p) => p.masteryLevel === 'MASTERED'
+          ).length;
+        }
+
+        const progressPercentage = wordCount > 0
+          ? Math.round((masteredCount / wordCount) * 100)
+          : 0;
+
+        return {
+          ...collection,
+          wordCount,
+          progressCount,
+          masteredCount,
+          progressPercentage,
+        };
+      })
+    );
 
     res.json({ collections: collectionsWithProgress });
   } catch (error) {

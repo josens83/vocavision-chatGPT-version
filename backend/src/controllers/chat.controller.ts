@@ -1,22 +1,51 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
+import OpenAI from 'openai';
 
 const prisma = new PrismaClient();
 
-// AI Response Generator - Mock implementation
-// In production, this would integrate with OpenAI, Claude, or other LLM APIs
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// System prompt for the vocabulary learning assistant
+const SYSTEM_PROMPT = `당신은 VocaVision의 AI 영어 학습 도우미입니다. 한국어 사용자를 위한 영어 단어 학습을 돕습니다.
+
+역할:
+- 영어 단어의 뜻, 발음, 예문을 친절하게 설명
+- 효과적인 암기법(Mnemonics)과 어원(Etymology) 정보 제공
+- 간격 반복 학습(Spaced Repetition) 팁 제공
+- 재미있는 퀴즈와 학습 게임 진행
+- 학습 동기부여와 격려
+
+스타일:
+- 친근하고 격려적인 톤 사용
+- 이모지를 적절히 활용
+- 복잡한 개념은 쉽게 풀어서 설명
+- 마크다운 형식 사용 (볼드, 리스트 등)
+- 답변 끝에 관련 추천 질문 제시
+
+금지 사항:
+- 학습과 무관한 주제 논의
+- 부적절하거나 불쾌한 내용
+- 틀린 정보 제공`;
+
+// AI Response Generator using OpenAI GPT-4
 const generateAIResponse = async (
   message: string,
   context?: string,
-  wordId?: string
+  wordId?: string,
+  conversationHistory?: { role: 'user' | 'assistant'; content: string }[]
 ): Promise<{
   content: string;
   suggestions?: string[];
   relatedWords?: { id: string; word: string; definition: string }[];
 }> => {
-  const lowerMessage = message.toLowerCase();
+  // Build context with word information if wordId is provided
+  let wordContext = '';
+  let relatedWords: { id: string; word: string; definition: string }[] = [];
 
-  // Word-specific context
   if (wordId) {
     try {
       const word = await prisma.word.findUnique({
@@ -24,184 +53,166 @@ const generateAIResponse = async (
         include: {
           examples: true,
           mnemonics: true,
+          etymologies: true,
         },
       });
 
       if (word) {
-        return {
-          content: `"${word.word}"에 대해 알려드릴게요!
+        wordContext = `\n\n[현재 학습 중인 단어 정보]
+단어: ${word.word}
+뜻: ${word.definition}
+발음: ${word.pronunciation || '정보 없음'}
+품사: ${word.partOfSpeech || '정보 없음'}
+난이도: ${word.difficulty || '정보 없음'}
+${word.examples && word.examples.length > 0 ? `예문:\n${word.examples.slice(0, 3).map((ex: any) => `- "${ex.sentence}"${ex.translation ? ` (${ex.translation})` : ''}`).join('\n')}` : ''}
+${word.mnemonics && word.mnemonics.length > 0 ? `암기법:\n${word.mnemonics.slice(0, 2).map((m: any) => `- ${m.content}`).join('\n')}` : ''}
+${word.etymologies && word.etymologies.length > 0 ? `어원: ${word.etymologies[0].content}` : ''}`;
 
-**뜻**: ${word.definition}
-${word.pronunciation ? `**발음**: ${word.pronunciation}` : ''}
-${word.partOfSpeech ? `**품사**: ${word.partOfSpeech}` : ''}
-
-${word.examples && word.examples.length > 0 ? `**예문**:
-${word.examples.slice(0, 2).map((ex: any) => `- "${ex.sentence}"${ex.translation ? ` (${ex.translation})` : ''}`).join('\n')}` : ''}
-
-${word.mnemonics && word.mnemonics.length > 0 ? `**암기법**:
-${word.mnemonics[0].content}` : ''}
-
-더 궁금한 점이 있으시면 물어봐주세요!`,
-          suggestions: [
-            `"${word.word}" 예문 더 보기`,
-            `"${word.word}" 관련 단어`,
-            '다른 단어 검색하기',
-          ],
-        };
+        relatedWords = [{ id: word.id, word: word.word, definition: word.definition }];
       }
     } catch (error) {
       console.error('Error fetching word:', error);
     }
   }
 
-  // General responses based on message content
-  if (lowerMessage.includes('추천') || lowerMessage.includes('오늘의 단어')) {
-    const randomWords = await prisma.word.findMany({
-      take: 3,
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, word: true, definition: true },
-    });
+  // Search for words mentioned in the message
+  const lowerMessage = message.toLowerCase();
+  const wordMatch = message.match(/"([^"]+)"|'([^']+)'|「([^」]+)」|(\b[a-zA-Z]{3,}\b)/);
+  const searchWord = wordMatch ? (wordMatch[1] || wordMatch[2] || wordMatch[3] || wordMatch[4]) : null;
 
-    return {
-      content: `오늘의 추천 단어입니다! 📚
-
-${randomWords.map((w, i) => `${i + 1}. **${w.word}**: ${w.definition}`).join('\n\n')}
-
-어떤 단어를 먼저 학습해볼까요?`,
-      suggestions: randomWords.map((w) => `"${w.word}" 자세히 보기`),
-      relatedWords: randomWords,
-    };
-  }
-
-  if (lowerMessage.includes('팁') || lowerMessage.includes('방법') || lowerMessage.includes('어떻게')) {
-    return {
-      content: `효과적인 영어 단어 학습 팁을 알려드릴게요! 🎯
-
-1. **간격 반복 학습 (Spaced Repetition)**
-   복습 주기를 점점 늘려가며 학습하세요. VocaVision의 플래시카드가 이 방법을 사용합니다!
-
-2. **연상 기억법 (Mnemonics)**
-   단어와 관련된 이미지나 이야기를 만들어보세요. 커뮤니티 암기법을 참고해보세요!
-
-3. **문맥 속 학습**
-   예문과 함께 단어를 외우세요. 직접 문장을 만들어보면 더 효과적이에요.
-
-4. **하루 목표 설정**
-   매일 5-10개의 새 단어를 목표로 하세요. 꾸준함이 가장 중요합니다!
-
-5. **어원 학습**
-   단어의 어원을 알면 파생어까지 쉽게 외울 수 있어요.
-
-어떤 방법에 대해 더 알고 싶으신가요?`,
-      suggestions: [
-        '간격 반복 학습이 뭐예요?',
-        '암기법 예시 보여주세요',
-        '오늘부터 학습 시작하기',
-      ],
-    };
-  }
-
-  if (lowerMessage.includes('퀴즈') || lowerMessage.includes('테스트')) {
-    const randomWord = await prisma.word.findFirst({
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, word: true, definition: true },
-    });
-
-    if (randomWord) {
-      return {
-        content: `좋아요! 간단한 퀴즈를 내볼게요! 🧠
-
-다음 단어의 뜻은 무엇일까요?
-
-**"${randomWord.word}"**
-
-잠시 생각해보시고, 답을 말씀해주세요!
-
-힌트가 필요하시면 "힌트"라고 말씀해주세요.`,
-        suggestions: ['힌트 주세요', '정답 알려주세요', '다른 퀴즈 내줘'],
-      };
-    }
-  }
-
-  if (lowerMessage.includes('뜻') || lowerMessage.includes('의미') || lowerMessage.includes('무슨')) {
-    // Extract word from quotes or common patterns
-    const wordMatch = message.match(/"([^"]+)"|'([^']+)'|「([^」]+)」|(\w+)(?:의 뜻| 뜻| 의미| 무슨)/);
-    const searchWord = wordMatch ? (wordMatch[1] || wordMatch[2] || wordMatch[3] || wordMatch[4]) : null;
-
-    if (searchWord) {
-      const word = await prisma.word.findFirst({
+  if (searchWord && !wordId) {
+    try {
+      const foundWord = await prisma.word.findFirst({
         where: {
           OR: [
-            { word: { contains: searchWord, mode: 'insensitive' } },
             { word: { equals: searchWord, mode: 'insensitive' } },
+            { word: { contains: searchWord, mode: 'insensitive' } },
           ],
         },
-        include: { examples: true },
+        include: { examples: true, mnemonics: true, etymologies: true },
       });
 
-      if (word) {
-        return {
-          content: `"${word.word}"의 뜻을 알려드릴게요! 📖
+      if (foundWord) {
+        wordContext = `\n\n[데이터베이스에서 찾은 단어 정보]
+단어: ${foundWord.word}
+뜻: ${foundWord.definition}
+발음: ${foundWord.pronunciation || '정보 없음'}
+${foundWord.examples && foundWord.examples.length > 0 ? `예문: "${foundWord.examples[0].sentence}"` : ''}
+${foundWord.mnemonics && foundWord.mnemonics.length > 0 ? `암기법: ${foundWord.mnemonics[0].content}` : ''}`;
 
-**뜻**: ${word.definition}
-${word.pronunciation ? `**발음**: ${word.pronunciation}` : ''}
-
-${word.examples && word.examples.length > 0 ? `**예문**: "${word.examples[0].sentence}"` : ''}
-
-이 단어를 학습 목록에 추가하시겠어요?`,
-          suggestions: [`"${word.word}" 더 자세히`, '학습 목록에 추가', '다른 단어 검색'],
-          relatedWords: [{ id: word.id, word: word.word, definition: word.definition }],
-        };
+        relatedWords = [{ id: foundWord.id, word: foundWord.word, definition: foundWord.definition }];
       }
-
-      return {
-        content: `죄송해요, "${searchWord}"를 데이터베이스에서 찾을 수 없었어요. 😅
-
-다른 단어를 검색해보시거나, 단어 페이지에서 직접 찾아보시는 건 어떨까요?`,
-        suggestions: ['단어 검색 페이지로', '오늘의 추천 단어', '다른 질문하기'],
-      };
+    } catch (error) {
+      console.error('Error searching word:', error);
     }
   }
 
-  // Default response
-  return {
-    content: `안녕하세요! VocaVision AI 학습 도우미입니다! 🎓
+  // Get random words for recommendations
+  let recommendedWords: { id: string; word: string; definition: string }[] = [];
+  if (lowerMessage.includes('추천') || lowerMessage.includes('오늘의 단어')) {
+    try {
+      const randomWords = await prisma.word.findMany({
+        take: 5,
+        skip: Math.floor(Math.random() * 50),
+        select: { id: true, word: true, definition: true },
+      });
+      recommendedWords = randomWords;
+      if (randomWords.length > 0) {
+        wordContext += `\n\n[추천 단어 목록]
+${randomWords.map((w, i) => `${i + 1}. ${w.word}: ${w.definition}`).join('\n')}`;
+      }
+    } catch (error) {
+      console.error('Error fetching random words:', error);
+    }
+  }
 
-저는 다음과 같은 도움을 드릴 수 있어요:
+  // Build messages array for OpenAI
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: 'system', content: SYSTEM_PROMPT + wordContext },
+  ];
 
-📚 **단어 학습**
-- 단어의 뜻, 발음, 예문 설명
-- 암기법 및 어원 정보
+  // Add conversation history if available
+  if (conversationHistory && conversationHistory.length > 0) {
+    // Keep only last 10 messages to avoid token limits
+    const recentHistory = conversationHistory.slice(-10);
+    for (const msg of recentHistory) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+  }
 
-🎯 **학습 팁**
-- 효과적인 학습 방법 안내
-- 오늘의 추천 단어
+  // Add current message
+  messages.push({ role: 'user', content: message });
 
-🧠 **퀴즈**
-- 재미있는 단어 퀴즈
-- 복습 테스트
+  try {
+    // Call OpenAI API
+    const completion = await openai.chat.completions.create({
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      messages,
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
 
-무엇이 궁금하신가요?`,
-    suggestions: [
-      '오늘의 단어 추천해줘',
-      '영어 공부 팁 알려줘',
-      '단어 퀴즈 내줘',
-    ],
-  };
+    const aiContent = completion.choices[0]?.message?.content || '죄송합니다. 응답을 생성하는 데 문제가 발생했습니다.';
+
+    // Generate contextual suggestions
+    let suggestions: string[] = [];
+    if (relatedWords.length > 0) {
+      suggestions = [
+        `"${relatedWords[0].word}" 예문 더 보기`,
+        `"${relatedWords[0].word}" 암기법 알려줘`,
+        '비슷한 단어 추천해줘',
+      ];
+    } else if (recommendedWords.length > 0) {
+      suggestions = recommendedWords.slice(0, 3).map(w => `"${w.word}" 자세히 알려줘`);
+    } else {
+      suggestions = [
+        '오늘의 단어 추천해줘',
+        '영어 공부 팁 알려줘',
+        '단어 퀴즈 내줘',
+      ];
+    }
+
+    return {
+      content: aiContent,
+      suggestions,
+      relatedWords: relatedWords.length > 0 ? relatedWords : (recommendedWords.length > 0 ? recommendedWords.slice(0, 3) : undefined),
+    };
+  } catch (error: any) {
+    console.error('OpenAI API Error:', error);
+
+    // Fallback response when OpenAI is unavailable
+    if (error?.status === 401 || error?.code === 'invalid_api_key') {
+      return {
+        content: `⚠️ AI 서비스가 현재 구성되지 않았습니다.
+
+관리자에게 OpenAI API 키 설정을 요청해주세요.
+
+그동안 단어 학습, 플래시카드, 퀴즈 기능은 정상적으로 사용하실 수 있습니다!`,
+        suggestions: ['단어 목록 보기', '퀴즈 풀기', '플래시카드 학습'],
+      };
+    }
+
+    return {
+      content: `죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.
+
+오류 내용: ${error?.message || '알 수 없는 오류'}`,
+      suggestions: ['다시 시도', '다른 질문하기'],
+    };
+  }
 };
 
 // Send a message and get AI response
 export const sendMessage = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req as any).user?.id;
-    const { message, conversationId, wordId, context } = req.body;
+    const { message, conversationId, wordId, context, history } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: '메시지를 입력해주세요.' });
     }
 
-    // Generate AI response
-    const aiResponse = await generateAIResponse(message, context, wordId);
+    // Generate AI response with conversation history
+    const aiResponse = await generateAIResponse(message, context, wordId, history);
 
     // Optionally save to database (if you want server-side history)
     // For now, we rely on client-side storage
