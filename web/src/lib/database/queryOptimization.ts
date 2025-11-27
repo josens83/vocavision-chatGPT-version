@@ -247,9 +247,10 @@ export class BatchLoader<K, V> {
 
       // Create map for O(1) lookups
       const resultMap = new Map<K, V>();
-      results.forEach((result: V & { id?: K }) => {
-        if (result && 'id' in result) {
-          resultMap.set(result.id as K, result);
+      results.forEach((result) => {
+        const r = result as V & { id?: K };
+        if (r && 'id' in r) {
+          resultMap.set(r.id as K, result);
         }
       });
 
