@@ -23,6 +23,8 @@ import achievementRoutes from './routes/achievement.routes';
 import collectionRoutes from './routes/collection.routes';
 import notificationRoutes from './routes/notification.routes';
 import chatRoutes from './routes/chat.routes';
+import deckRoutes from './routes/deck.routes';
+import leagueRoutes from './routes/league.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -44,8 +46,27 @@ export const prisma = new PrismaClient({
 
 // Middleware
 app.use(helmet());
+
+// CORS configuration - allow multiple origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://vocavision-web.vercel.app',
+  process.env.CORS_ORIGIN,
+].filter(Boolean) as string[];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, false);
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -121,6 +142,8 @@ app.use('/api/achievements', achievementRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/decks', deckRoutes);
+app.use('/api/leagues', leagueRoutes);
 
 // Error handling
 app.use(errorHandler);
