@@ -3,11 +3,37 @@ import {
   getWords,
   getWordById,
   createWord,
-  getRandomWords
+  getRandomWords,
+  getPublicWords
 } from '../controllers/word.controller';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
+import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.middleware';
 
 const router = Router();
+
+/**
+ * @swagger
+ * /words/public:
+ *   get:
+ *     summary: 공개 단어 목록 조회 (인증 불필요)
+ *     tags: [Words]
+ *     parameters:
+ *       - in: query
+ *         name: examCategory
+ *         schema:
+ *           type: string
+ *           enum: [CSAT, TEPS, TOEIC, TOEFL, SAT]
+ *         description: 시험 카테고리 필터
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: 조회할 단어 수
+ *     responses:
+ *       200:
+ *         description: 단어 목록
+ */
+router.get('/public', getPublicWords);
 
 /**
  * @swagger

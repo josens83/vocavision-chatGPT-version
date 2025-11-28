@@ -92,11 +92,17 @@ model Word {
   id          String   @id @default(uuid())
   word        String   @unique
   definition  String
+  definitionKo String?  // 한국어 뜻
   pronunciation String?
   phonetic    String?
   partOfSpeech PartOfSpeech
   difficulty  DifficultyLevel @default(INTERMEDIATE)
+  examCategory ExamCategory  // 시험 카테고리 (수능, TEPS, TOEIC, TOEFL, SAT)
   frequency   Int      @default(0) // Word frequency ranking
+
+  // Additional learning content
+  tips        String?  // 학습 팁
+  commonMistakes String? // 흔한 실수
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -114,6 +120,7 @@ model Word {
 
   @@index([word])
   @@index([difficulty])
+  @@index([examCategory])
   @@index([frequency])
 }
 
@@ -129,10 +136,18 @@ enum PartOfSpeech {
 }
 
 enum DifficultyLevel {
-  BEGINNER
+  BASIC
   INTERMEDIATE
   ADVANCED
-  EXPERT
+}
+
+// Exam Categories for Korean users
+enum ExamCategory {
+  CSAT      // 수능 (대학수학능력시험)
+  TEPS      // 텝스 (서울대 영어능력시험)
+  TOEIC     // 토익 (비즈니스 영어)
+  TOEFL     // 토플 (학술 영어)
+  SAT       // SAT (미국 대입)
 }
 
 // ============================================

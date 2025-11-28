@@ -13,6 +13,7 @@ export const getWords = async (
       page = '1',
       limit = '20',
       difficulty,
+      examCategory,
       search
     } = req.query;
 
@@ -24,6 +25,10 @@ export const getWords = async (
 
     if (difficulty) {
       where.difficulty = difficulty;
+    }
+
+    if (examCategory) {
+      where.examCategory = examCategory;
     }
 
     if (search) {
@@ -52,6 +57,7 @@ export const getWords = async (
     ]);
 
     res.json({
+      data: words,
       words,
       pagination: {
         page: pageNum,
@@ -131,12 +137,15 @@ export const getRandomWords = async (
   next: NextFunction
 ) => {
   try {
-    const { count = '10', difficulty } = req.query;
+    const { count = '10', difficulty, examCategory } = req.query;
     const limitNum = parseInt(count as string);
 
     const where: any = {};
     if (difficulty) {
       where.difficulty = difficulty;
+    }
+    if (examCategory) {
+      where.examCategory = examCategory;
     }
 
     // Get random words using a simple approach
@@ -154,6 +163,50 @@ export const getRandomWords = async (
     });
 
     res.json({ words });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Public endpoint - no authentication required
+export const getPublicWords = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { examCategory, limit = '10', difficulty } = req.query;
+    const limitNum = Math.min(parseInt(limit as string), 50); // Max 50 for public
+
+    const where: any = {};
+
+    if (examCategory) {
+      where.examCategory = examCategory;
+    }
+
+    if (difficulty) {
+      where.difficulty = difficulty;
+    }
+
+    const words = await prisma.word.findMany({
+      where,
+      select: {
+        id: true,
+        word: true,
+        definition: true,
+        definitionKo: true,
+        pronunciation: true,
+        phonetic: true,
+        partOfSpeech: true,
+        difficulty: true,
+        examCategory: true,
+        tips: true,
+      },
+      take: limitNum,
+      orderBy: { frequency: 'asc' } // Most common words first
+    });
+
+    res.json({ data: words });
   } catch (error) {
     next(error);
   }
