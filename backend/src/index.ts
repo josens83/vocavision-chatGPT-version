@@ -25,6 +25,7 @@ import notificationRoutes from './routes/notification.routes';
 import chatRoutes from './routes/chat.routes';
 import deckRoutes from './routes/deck.routes';
 import leagueRoutes from './routes/league.routes';
+import internalRoutes from './routes/internal.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -159,6 +160,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/decks', deckRoutes);
 app.use('/api/leagues', leagueRoutes);
+
+// Internal routes (for admin operations via browser URL)
+app.use('/internal', internalRoutes);
 
 // Error handling
 app.use(errorHandler);
