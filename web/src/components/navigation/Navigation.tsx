@@ -215,7 +215,7 @@ export default function Navigation() {
             <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block">
               <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
             </button>
-            <Link href="/login" className="btn btn-primary py-2 hidden sm:flex">시작하기</Link>
+            <Link href="/auth/login" className="btn btn-primary py-2 hidden sm:flex">시작하기</Link>
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors lg:hidden">
               <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
