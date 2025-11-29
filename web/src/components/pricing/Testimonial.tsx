@@ -1,120 +1,98 @@
 "use client";
 
-// ============================================
-// Types
-// ============================================
-
-export interface TestimonialProps {
-  quote: string;
-  author: string;
-  role: string;
-  avatar?: string;
-  rating?: number;
-}
-
-export interface TestimonialsGridProps {
-  children: React.ReactNode;
-  columns?: 1 | 2 | 3;
-}
+import { ReactNode } from "react";
 
 // ============================================
-// VocaVision Testimonials Data
+// Quote Icon Component
 // ============================================
 
-export const vocaVisionTestimonials: TestimonialProps[] = [
-  {
-    quote: "VocaVision 덕분에 수능 영어 1등급을 받았어요! 이미지로 단어를 외우니까 정말 오래 기억에 남아요.",
-    author: "김지원",
-    role: "고3 수험생",
-    rating: 5,
-  },
-  {
-    quote: "토익 900점 목표였는데, 3개월 만에 달성했습니다. AI 개인화 학습이 정말 효과적이에요.",
-    author: "박민수",
-    role: "취업 준비생",
-    rating: 5,
-  },
-  {
-    quote: "아이들과 함께 가족 플랜으로 사용 중이에요. 학습 리포트로 진도 확인이 편리합니다.",
-    author: "이현주",
-    role: "학부모",
-    rating: 5,
-  },
-  {
-    quote: "연상법과 어원 학습이 정말 효과적이에요. 단순 암기보다 훨씬 재미있게 공부할 수 있어요.",
-    author: "최서연",
-    role: "대학생",
-    rating: 5,
-  },
-  {
-    quote: "TEPS 준비하면서 VocaVision 쓰고 있는데, 난이도별로 체계적으로 학습할 수 있어서 좋아요.",
-    author: "정우진",
-    role: "대학원생",
-    rating: 4,
-  },
-  {
-    quote: "출퇴근 시간에 오프라인 모드로 공부해요. 자투리 시간 활용하기 딱 좋습니다.",
-    author: "한소희",
-    role: "직장인",
-    rating: 5,
-  },
-];
-
-// ============================================
-// Star Rating Component
-// ============================================
-
-function StarRating({ rating = 5 }: { rating?: number }) {
+function QuoteIcon({ className = "" }: { className?: string }) {
   return (
-    <div className="flex gap-0.5 mb-4">
-      {[...Array(5)].map((_, i) => (
-        <svg
-          key={i}
-          className={`w-5 h-5 ${i < rating ? "text-yellow-400" : "text-slate-200"}`}
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
+    <svg
+      className={`w-8 h-8 text-green-200 ${className}`}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M9.983 3v7.391c0 5.704-3.731 9.57-8.983 10.609l-.995-2.151c2.432-.917 3.995-3.638 3.995-5.849h-4v-10h9.983zm14.017 0v7.391c0 5.704-3.748 9.571-9 10.609l-.996-2.151c2.433-.917 3.996-3.638 3.996-5.849h-3.983v-10h9.983z" />
+    </svg>
+  );
+}
+
+// ============================================
+// Avatar Initials Component
+// ============================================
+
+interface AvatarInitialsProps {
+  name: string;
+  size?: "sm" | "md" | "lg";
+}
+
+export function AvatarInitials({ name, size = "md" }: AvatarInitialsProps) {
+  // Extract initials from name (first letter of each word, max 2)
+  const initials = name
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase())
+    .slice(0, 2)
+    .join("");
+
+  const sizeClasses = {
+    sm: "w-8 h-8 text-xs",
+    md: "w-10 h-10 text-sm",
+    lg: "w-12 h-12 text-base",
+  };
+
+  return (
+    <div
+      className={`${sizeClasses[size]} rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center font-semibold text-green-700`}
+    >
+      {initials}
     </div>
   );
 }
 
 // ============================================
-// TestimonialCard Component
+// Testimonial Card Component
 // ============================================
 
-export function TestimonialCard({ quote, author, role, avatar, rating = 5 }: TestimonialProps) {
-  const initials = author
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2);
+export interface TestimonialProps {
+  quote: string;
+  authorName: string;
+  authorTitle?: string;
+  avatarUrl?: string;
+}
 
+export function TestimonialCard({
+  quote,
+  authorName,
+  authorTitle,
+  avatarUrl,
+}: TestimonialProps) {
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300">
-      <StarRating rating={rating} />
+    <div className="bg-white rounded-2xl p-6 shadow-sm flex flex-col items-center text-center gap-4 h-full">
+      {/* Quote Icon */}
+      <QuoteIcon />
 
-      <blockquote className="text-slate-700 mb-6 leading-relaxed">
-        &ldquo;{quote}&rdquo;
-      </blockquote>
+      {/* Quote Text */}
+      <p className="text-slate-600 text-sm leading-relaxed flex-1">
+        {quote}
+      </p>
 
-      <div className="flex items-center gap-3">
-        {avatar ? (
+      {/* Author */}
+      <div className="flex flex-col items-center gap-3">
+        {avatarUrl ? (
           <img
-            src={avatar}
-            alt={author}
-            className="w-12 h-12 rounded-full object-cover"
+            src={avatarUrl}
+            alt={authorName}
+            className="w-10 h-10 rounded-full object-cover border-2 border-green-400"
           />
         ) : (
-          <div className="w-12 h-12 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold">
-            {initials}
-          </div>
+          <AvatarInitials name={authorName} />
         )}
         <div>
-          <div className="font-semibold text-slate-900">{author}</div>
-          <div className="text-sm text-slate-500">{role}</div>
+          <p className="font-semibold text-slate-800">{authorName}</p>
+          {authorTitle && (
+            <p className="text-xs text-slate-500">{authorTitle}</p>
+          )}
         </div>
       </div>
     </div>
@@ -122,48 +100,50 @@ export function TestimonialCard({ quote, author, role, avatar, rating = 5 }: Tes
 }
 
 // ============================================
-// TestimonialsGrid Component
+// Testimonials Grid Component
 // ============================================
 
+interface TestimonialsGridProps {
+  children: ReactNode;
+  columns?: 1 | 2 | 3 | 4;
+}
+
 export function TestimonialsGrid({ children, columns = 3 }: TestimonialsGridProps) {
-  const gridCols = {
+  const colsClass = {
     1: "grid-cols-1",
-    2: "grid-cols-1 md:grid-cols-2",
-    3: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+    2: "grid-cols-1 sm:grid-cols-2",
+    3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+    4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
   };
 
   return (
-    <div className={`grid ${gridCols[columns]} gap-6`}>
+    <div className={`grid ${colsClass[columns]} gap-6 max-w-5xl mx-auto`}>
       {children}
     </div>
   );
 }
 
 // ============================================
-// TestimonialsSection Component
+// Default Testimonials for VocaVision
 // ============================================
 
-export function TestimonialsSection() {
-  return (
-    <section className="py-20 bg-surface-muted">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-display-md font-bold text-slate-900 mb-4">
-            사용자 후기
-          </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            VocaVision으로 영어 실력을 향상시킨 학습자들의 이야기를 들어보세요.
-          </p>
-        </div>
-
-        <TestimonialsGrid columns={3}>
-          {vocaVisionTestimonials.map((testimonial, index) => (
-            <TestimonialCard key={index} {...testimonial} />
-          ))}
-        </TestimonialsGrid>
-      </div>
-    </section>
-  );
-}
-
-export default TestimonialCard;
+export const vocaVisionTestimonials: TestimonialProps[] = [
+  {
+    quote:
+      "VocaVision을 사용한 후 영어 단어 암기가 훨씬 쉬워졌어요. 플래시카드와 퀴즈가 정말 효과적이고, 매일 학습하는 게 즐거워졌습니다. TOEIC 점수도 100점이나 올랐어요!",
+    authorName: "김민지",
+    authorTitle: "대학생",
+  },
+  {
+    quote:
+      "간격 반복 학습 시스템이 정말 과학적이에요! 잊어버릴 때쯤 복습 알림이 와서 효율적으로 암기할 수 있었습니다. UI도 깔끔하고 사용하기 편해요.",
+    authorName: "이준호",
+    authorTitle: "직장인",
+  },
+  {
+    quote:
+      "영어 학원 강사로서 학생들에게 VocaVision을 추천하고 있어요. 학생들의 동기부여에 효과적이고, 리더보드 기능이 경쟁심을 자극해서 더 열심히 공부하게 만들어요.",
+    authorName: "박서연",
+    authorTitle: "영어 강사",
+  },
+];
