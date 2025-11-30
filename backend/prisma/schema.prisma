@@ -97,14 +97,47 @@ model Word {
   phonetic    String?
   partOfSpeech PartOfSpeech
   difficulty  DifficultyLevel @default(INTERMEDIATE)
-  examCategory ExamCategory  // 시험 카테고리 (수능, TEPS, TOEIC, TOEFL, SAT)
-  level       String?  // 시험 내 레벨 (L1, L2, L3 등)
+  cefrLevel   CEFRLevel?      // CEFR 레벨 (A1-C2)
+  examCategory ExamCategory   // 시험 카테고리 (수능, TEPS, TOEIC, TOEFL, SAT)
+  level       String?         // 시험 내 레벨 (L1, L2, L3 등)
   frequency   Int      @default(0) // Word frequency ranking
   tags        String[] // 의미/주제 태그 (일반, 과학, 심리 등)
 
   // Additional learning content
   tips        String?  // 학습 팁
   commonMistakes String? // 흔한 실수
+
+  // ===== 발음 (Pronunciation) - 확장 =====
+  ipaUs       String?  // /ˈæp.əl/ 미국식 IPA
+  ipaUk       String?  // 영국식 IPA
+  audioUrlUs  String?  // 미국식 발음 오디오 URL
+  audioUrlUk  String?  // 영국식 발음 오디오 URL
+
+  // ===== 형태 분석 (Morphology) =====
+  prefix      String?  // 접두사 "un-", "re-"
+  root        String?  // 어근 "port" (나르다)
+  suffix      String?  // 접미사 "-tion", "-ly"
+  morphologyNote String? // 형태 분석 설명
+
+  // ===== 관련어 배열 (빠른 조회용) =====
+  synonymList    String[] // 동의어 배열
+  antonymList    String[] // 반의어 배열
+  rhymingWords   String[] // 라이밍 단어 배열
+  relatedWords   String[] // 관련어 배열
+
+  // ===== 콘텐츠 상태 (Admin) =====
+  status      ContentStatus @default(DRAFT)
+  isActive    Boolean       @default(true)
+  publishedAt DateTime?
+
+  // ===== AI 생성 메타데이터 =====
+  aiModel         String?   // "claude-sonnet-4-20250514" 등
+  aiGeneratedAt   DateTime? // AI 생성 시각
+  aiPromptVersion String?   // 사용된 프롬프트 버전
+  humanReviewed   Boolean   @default(false)
+  reviewedBy      String?   // 검토자 ID
+  reviewedAt      DateTime?
+  reviewNotes     String?   // 검토 노트
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -118,13 +151,16 @@ model Word {
   etymology   Etymology?
   synonyms    Synonym[]
   antonyms    Antonym[]
+  collocations Collocation[]
   progress    UserProgress[]
 
   @@index([word])
   @@index([difficulty])
+  @@index([cefrLevel])
   @@index([examCategory])
   @@index([frequency])
   @@index([level])
+  @@index([status])
 }
 
 enum PartOfSpeech {
@@ -142,6 +178,25 @@ enum DifficultyLevel {
   BASIC
   INTERMEDIATE
   ADVANCED
+}
+
+// CEFR Level (유럽공통참조기준)
+enum CEFRLevel {
+  A1   // Elementary
+  A2   // Pre-intermediate
+  B1   // Intermediate
+  B2   // Upper-intermediate
+  C1   // Advanced
+  C2   // Proficiency
+}
+
+// Content Status for Admin workflow
+enum ContentStatus {
+  DRAFT           // 초안 - AI 생성 직후
+  PENDING_REVIEW  // 검토 대기
+  APPROVED        // 승인됨 - 발행 가능
+  PUBLISHED       // 발행됨
+  ARCHIVED        // 보관됨
 }
 
 // Exam Categories for Korean users
@@ -164,6 +219,16 @@ model Example {
   sentence  String
   translation String? // 한국어 번역
   audioUrl  String?
+
+  // ===== 예문 분류 (Content Pipeline) =====
+  isFunny       Boolean  @default(false)  // 재미있는 예문 여부
+  isReal        Boolean  @default(true)   // 실제 사용 예문 vs 학습용
+  source        String?  // 출처 (영화, 드라마, 뉴스 등)
+  highlightWord String?  // 강조할 단어
+  grammarNote   String?  // 문법 설명
+  order         Int      @default(0)  // 정렬 순서
+
+  createdAt DateTime @default(now())
 
   word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
 
@@ -237,11 +302,16 @@ model Mnemonic {
   wordId      String
   title       String
   content     String
-  koreanHint  String?  // 한국어 연상 힌트
-  imageUrl    String?
+  koreanHint  String?  // 한국어 연상 힌트 (경선식 스타일)
+  imageUrl    String?  // 연상 이미지 URL
   source      MnemonicSource @default(AI_GENERATED)
   rating      Float    @default(0)
   ratingCount Int      @default(0)
+
+  // ===== WHISK 이미지 생성 (Content Pipeline) =====
+  whiskPrompt String?  // WHISK 이미지 생성 프롬프트
+  whiskStyle  String?  // "animation", "illustration"
+  gifUrl      String?  // WHISK 생성 GIF URL
 
   createdAt   DateTime @default(now())
 
@@ -278,9 +348,13 @@ model Etymology {
   id          String   @id @default(uuid())
   wordId      String   @unique
   origin      String
+  language    String?  // 어원 언어 (Latin, Greek, French, Germanic 등)
   rootWords   String[] // Array of root words
   evolution   String   // 단어의 발전 과정
   relatedWords String[] // 같은 어원을 가진 단어들
+  breakdown   String?  // 어원 분해 설명
+
+  createdAt   DateTime @default(now())
 
   word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
 }
@@ -304,6 +378,25 @@ model Antonym {
   explanation String?
 
   word      Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([wordId])
+}
+
+// 8. Collocations (콜로케이션)
+model Collocation {
+  id          String   @id @default(uuid())
+  wordId      String
+  phrase      String   // "make a decision"
+  translation String?  // "결정을 내리다"
+  exampleEn   String?  // 예문 (영어)
+  exampleKo   String?  // 예문 (한국어)
+  type        String?  // "verb+noun", "adj+noun", "adv+adj"
+  frequency   Int      @default(0)  // 사용 빈도
+  order       Int      @default(0)
+
+  createdAt   DateTime @default(now())
+
+  word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
 
   @@index([wordId])
 }
@@ -664,4 +757,66 @@ enum LeagueResult {
   PROMOTED
   STAYED
   DEMOTED
+}
+
+// ============================================
+// Content Pipeline - AI 생성 작업 관리
+// ============================================
+
+// AI 생성 작업 큐 (배치 처리용)
+model ContentGenerationJob {
+  id            String      @id @default(uuid())
+
+  // 작업 대상
+  wordId        String?     // 단일 단어 ID
+  batchId       String?     // 배치 작업 그룹 ID
+  inputWords    String[]    // 배치 처리할 단어들
+
+  // 작업 상태
+  status        String      @default("pending")  // pending, processing, completed, failed
+  progress      Int         @default(0)          // 0-100 진행률
+
+  // 생성 설정
+  generateFields String[]   // ["etymology", "mnemonic", "examples"] 생성할 필드
+  examCategory  ExamCategory?
+  cefrLevel     CEFRLevel?
+  aiModel       String      @default("claude-sonnet-4-20250514")
+
+  // 결과
+  result        Json?       // 생성된 콘텐츠 JSON
+  errorMessage  String?
+  retryCount    Int         @default(0)
+
+  // 요청자
+  requestedById String?
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([status])
+  @@index([batchId])
+  @@index([createdAt])
+}
+
+// 콘텐츠 변경 이력 (Audit Log)
+model ContentAuditLog {
+  id            String      @id @default(uuid())
+
+  entityType    String      // "Word", "Example", "Mnemonic"
+  entityId      String
+  action        String      // "create", "update", "delete", "publish", "review"
+
+  previousData  Json?       // 변경 전 데이터
+  newData       Json?       // 변경 후 데이터
+  changedFields String[]    // 변경된 필드명들
+
+  performedById String?     // 수행자 ID
+  performedAt   DateTime    @default(now())
+  ipAddress     String?
+  userAgent     String?
+
+  @@index([entityType, entityId])
+  @@index([performedAt])
+  @@index([performedById])
 }

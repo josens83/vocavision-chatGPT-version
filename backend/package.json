@@ -19,6 +19,7 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@prisma/client": "^5.7.0",
     "prisma": "^5.7.0",
     "bcrypt": "^5.1.1",
