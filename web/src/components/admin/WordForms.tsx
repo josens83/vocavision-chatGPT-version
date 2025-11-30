@@ -18,20 +18,29 @@ import {
   Badge,
   Card,
 } from './ui';
-import { useWordMutations, useContentGeneration, useReview, useWordDetail } from '@/hooks/useAdminApi';
+import { useWordMutations, useContentGeneration, useReview, useWordDetail } from './hooks/useAdminApi';
 import {
-  AdminWord,
-  WordDetail,
+  VocaWord,
+  VocaContentFull,
   WordFormData,
   BatchUploadData,
-  EXAM_CATEGORIES,
-  CEFR_LEVELS,
-  CONTENT_STATUS_LABELS,
+  EXAM_CATEGORY_LABELS,
+  LEVEL_LABELS,
+  STATUS_LABELS,
   LEVEL_COLORS,
   STATUS_COLORS,
-  CEFRLevel,
+  DifficultyLevel,
   ExamCategory,
-} from '@/types/admin.types';
+  PartOfSpeech,
+} from './types/admin.types';
+
+// Helper arrays for form options
+const EXAM_CATEGORIES = Object.entries(EXAM_CATEGORY_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
+
+const CEFR_LEVELS: DifficultyLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 // ============================================
 // Word Form Modal
@@ -40,7 +49,7 @@ import {
 interface WordFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  editWord?: AdminWord | null;
+  editWord?: VocaWord | null;
   onSuccess: () => void;
 }
 
@@ -48,12 +57,9 @@ export function WordFormModal({ isOpen, onClose, editWord, onSuccess }: WordForm
   const { createWord, updateWord, loading, error } = useWordMutations();
   const [formData, setFormData] = useState<WordFormData>({
     word: '',
-    definition: '',
-    definitionKo: '',
-    pronunciation: '',
-    partOfSpeech: 'NOUN',
+    level: 'B1' as DifficultyLevel,
     examCategories: ['SUNEUNG'] as ExamCategory[],
-    level: 'B1' as CEFRLevel,
+    partOfSpeech: ['noun'] as PartOfSpeech[],
     topics: [],
     generateContent: true,
   });
@@ -62,24 +68,18 @@ export function WordFormModal({ isOpen, onClose, editWord, onSuccess }: WordForm
     if (editWord) {
       setFormData({
         word: editWord.word,
-        definition: editWord.definition,
-        definitionKo: editWord.definitionKo || '',
-        pronunciation: editWord.pronunciation || '',
-        partOfSpeech: editWord.partOfSpeech,
-        examCategories: editWord.examCategories,
         level: editWord.level,
+        examCategories: editWord.examCategories,
+        partOfSpeech: editWord.partOfSpeech,
         topics: editWord.topics,
         generateContent: false,
       });
     } else {
       setFormData({
         word: '',
-        definition: '',
-        definitionKo: '',
-        pronunciation: '',
-        partOfSpeech: 'NOUN',
-        examCategories: ['SUNEUNG'],
         level: 'B1',
+        examCategories: ['SUNEUNG'],
+        partOfSpeech: ['noun'],
         topics: [],
         generateContent: true,
       });
@@ -135,24 +135,25 @@ export function WordFormModal({ isOpen, onClose, editWord, onSuccess }: WordForm
 
         <div className="grid grid-cols-2 gap-4">
           <Select
-            label="품사"
-            value={formData.partOfSpeech || 'NOUN'}
-            onChange={(e) => setFormData({ ...formData, partOfSpeech: e.target.value })}
+            label="주요 품사"
+            value={formData.partOfSpeech[0] || 'noun'}
+            onChange={(e) => setFormData({ ...formData, partOfSpeech: [e.target.value as PartOfSpeech] })}
             options={[
-              { value: 'NOUN', label: '명사' },
-              { value: 'VERB', label: '동사' },
-              { value: 'ADJECTIVE', label: '형용사' },
-              { value: 'ADVERB', label: '부사' },
-              { value: 'PREPOSITION', label: '전치사' },
-              { value: 'CONJUNCTION', label: '접속사' },
+              { value: 'noun', label: '명사' },
+              { value: 'verb', label: '동사' },
+              { value: 'adjective', label: '형용사' },
+              { value: 'adverb', label: '부사' },
+              { value: 'preposition', label: '전치사' },
+              { value: 'conjunction', label: '접속사' },
+              { value: 'interjection', label: '감탄사' },
             ]}
           />
 
           <Select
             label="난이도 *"
             value={formData.level}
-            onChange={(e) => setFormData({ ...formData, level: e.target.value as CEFRLevel })}
-            options={CEFR_LEVELS.map((l) => ({ value: l, label: l }))}
+            onChange={(e) => setFormData({ ...formData, level: e.target.value as DifficultyLevel })}
+            options={CEFR_LEVELS.map((l) => ({ value: l, label: LEVEL_LABELS[l] }))}
           />
         </div>
 
@@ -178,29 +179,6 @@ export function WordFormModal({ isOpen, onClose, editWord, onSuccess }: WordForm
             ))}
           </div>
         </div>
-
-        <Input
-          label="발음"
-          value={formData.pronunciation || ''}
-          onChange={(e) => setFormData({ ...formData, pronunciation: e.target.value })}
-          placeholder="[əˈbændən]"
-        />
-
-        <Textarea
-          label="영어 정의"
-          value={formData.definition || ''}
-          onChange={(e) => setFormData({ ...formData, definition: e.target.value })}
-          placeholder="English definition..."
-          rows={2}
-        />
-
-        <Textarea
-          label="한국어 정의"
-          value={formData.definitionKo || ''}
-          onChange={(e) => setFormData({ ...formData, definitionKo: e.target.value })}
-          placeholder="한국어 뜻..."
-          rows={2}
-        />
 
         {!editWord && (
           <Checkbox
@@ -314,8 +292,8 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
           <Select
             label="난이도"
             value={formData.level}
-            onChange={(e) => setFormData({ ...formData, level: e.target.value as CEFRLevel })}
-            options={CEFR_LEVELS.map((l) => ({ value: l, label: l }))}
+            onChange={(e) => setFormData({ ...formData, level: e.target.value as DifficultyLevel })}
+            options={CEFR_LEVELS.map((l) => ({ value: l, label: LEVEL_LABELS[l] }))}
           />
         </div>
 
@@ -349,7 +327,7 @@ export function BatchUploadModal({ isOpen, onClose, onSuccess }: BatchUploadModa
 interface AIGenerationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  word: AdminWord | null;
+  word: VocaWord | null;
   onSuccess: () => void;
 }
 
@@ -417,7 +395,7 @@ export function AIGenerationModal({ isOpen, onClose, word, onSuccess }: AIGenera
 interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  word: AdminWord | null;
+  word: VocaWord | null;
   onSuccess: () => void;
 }
 
@@ -457,8 +435,8 @@ export function ReviewModal({ isOpen, onClose, word, onSuccess }: ReviewModalPro
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <span className="text-xl font-bold">{word.word}</span>
-            <Badge className={STATUS_COLORS[word.contentStatus]}>
-              {CONTENT_STATUS_LABELS[word.contentStatus]}
+            <Badge className={`${STATUS_COLORS[word.status].bg} ${STATUS_COLORS[word.status].text}`}>
+              {STATUS_LABELS[word.status]}
             </Badge>
           </div>
 
@@ -471,7 +449,7 @@ export function ReviewModal({ isOpen, onClose, word, onSuccess }: ReviewModalPro
           />
 
           <div className="flex flex-wrap gap-2 pt-4 border-t">
-            {word.contentStatus === 'APPROVED' ? (
+            {word.status === 'APPROVED' ? (
               <Button onClick={handlePublish} loading={loading}>
                 발행하기
               </Button>
@@ -515,7 +493,7 @@ export function ReviewModal({ isOpen, onClose, word, onSuccess }: ReviewModalPro
 // ============================================
 
 interface WordDetailViewProps {
-  word: AdminWord | null;
+  word: (VocaWord & { content?: VocaContentFull }) | null;
   onClose: () => void;
   onEdit: () => void;
   onGenerate: () => void;
@@ -541,18 +519,18 @@ export function WordDetailView({
 
   if (!word) return null;
 
-  const detail = wordDetail as WordDetail | null;
+  const detail = wordDetail?.content as VocaContentFull | undefined;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full max-w-lg bg-white shadow-modal z-50 animate-slide-in-right overflow-y-auto">
+    <div className="fixed inset-y-0 right-0 w-full max-w-lg bg-white shadow-xl z-50 overflow-y-auto">
       {/* Header */}
       <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">{word.word}</h2>
           <div className="flex items-center gap-2 mt-1">
-            <Badge className={LEVEL_COLORS[word.level]}>{word.level}</Badge>
-            <Badge className={STATUS_COLORS[word.contentStatus]}>
-              {CONTENT_STATUS_LABELS[word.contentStatus]}
+            <Badge style={{ backgroundColor: LEVEL_COLORS[word.level], color: 'white' }}>{word.level}</Badge>
+            <Badge className={`${STATUS_COLORS[word.status].bg} ${STATUS_COLORS[word.status].text}`}>
+              {STATUS_LABELS[word.status]}
             </Badge>
           </div>
         </div>
@@ -583,30 +561,32 @@ export function WordDetailView({
       <div className="px-6 py-4 space-y-6">
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin w-8 h-8 border-4 border-voca-pink-500 border-t-transparent rounded-full mx-auto" />
+            <div className="animate-spin w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full mx-auto" />
           </div>
         ) : (
           <>
             {/* Pronunciation */}
-            {(word.pronunciation || detail?.ipaUs) && (
+            {(detail?.ipaUs || detail?.ipaUk) && (
               <Section title="발음">
                 <p className="text-gray-600">
                   {detail?.ipaUs && <span className="mr-4">US: {detail.ipaUs}</span>}
                   {detail?.ipaUk && <span>UK: {detail.ipaUk}</span>}
                 </p>
-                {word.pronunciation && (
-                  <p className="text-sm text-gray-500 mt-1">{word.pronunciation}</p>
-                )}
               </Section>
             )}
 
-            {/* Definition */}
-            <Section title="정의">
-              <p className="text-gray-900">{word.definition}</p>
-              {word.definitionKo && (
-                <p className="text-gray-600 mt-2">{word.definitionKo}</p>
-              )}
-            </Section>
+            {/* Definitions */}
+            {detail?.definitions && detail.definitions.length > 0 && (
+              <Section title="정의">
+                {detail.definitions.map((def, i) => (
+                  <div key={i} className="mb-3">
+                    <span className="text-xs text-gray-400 uppercase">{def.partOfSpeech}</span>
+                    <p className="text-gray-900">{def.definitionEn}</p>
+                    <p className="text-gray-600 text-sm">{def.definitionKo}</p>
+                  </div>
+                ))}
+              </Section>
+            )}
 
             {/* Etymology */}
             {detail?.etymology && (
@@ -620,27 +600,24 @@ export function WordDetailView({
               </Section>
             )}
 
-            {/* Mnemonics */}
-            {detail?.mnemonics && detail.mnemonics.length > 0 && (
+            {/* Mnemonic */}
+            {detail?.mnemonic && (
               <Section title="연상 기억법">
-                {detail.mnemonics.map((m, i) => (
-                  <Card key={i} padding="sm" className="mb-2">
-                    <p className="font-medium text-gray-900">{m.title}</p>
-                    <p className="text-gray-600 text-sm">{m.content}</p>
-                    {m.koreanHint && (
-                      <p className="text-voca-pink-500 text-sm mt-1">
-                        "{m.koreanHint}"
-                      </p>
-                    )}
-                    {m.gifUrl && (
-                      <img
-                        src={m.gifUrl}
-                        alt="mnemonic"
-                        className="mt-2 rounded-lg w-full"
-                      />
-                    )}
-                  </Card>
-                ))}
+                <Card padding="sm" className="mb-2">
+                  <p className="text-gray-600 text-sm">{detail.mnemonic.description}</p>
+                  {detail.mnemonic.koreanAssociation && (
+                    <p className="text-pink-500 text-sm mt-1">
+                      "{detail.mnemonic.koreanAssociation}"
+                    </p>
+                  )}
+                  {detail.mnemonic.gifUrl && (
+                    <img
+                      src={detail.mnemonic.gifUrl}
+                      alt="mnemonic"
+                      className="mt-2 rounded-lg w-full"
+                    />
+                  )}
+                </Card>
               </Section>
             )}
 
@@ -663,9 +640,9 @@ export function WordDetailView({
               <Section title="예문">
                 {detail.examples.map((ex, i) => (
                   <div key={i} className="mb-3">
-                    <p className="text-gray-900">{ex.sentence}</p>
-                    {ex.translation && (
-                      <p className="text-gray-500 text-sm">{ex.translation}</p>
+                    <p className="text-gray-900">{ex.sentenceEn}</p>
+                    {ex.sentenceKo && (
+                      <p className="text-gray-500 text-sm">{ex.sentenceKo}</p>
                     )}
                     {ex.isFunny && (
                       <Badge color="yellow" size="sm" className="mt-1">
@@ -678,7 +655,7 @@ export function WordDetailView({
             )}
 
             {/* Related Words */}
-            {(detail?.synonyms?.length || detail?.antonyms?.length) && (
+            {(detail?.synonyms?.length || detail?.antonyms?.length) ? (
               <Section title="관련 단어">
                 {detail?.synonyms && detail.synonyms.length > 0 && (
                   <div className="mb-2">
@@ -701,7 +678,7 @@ export function WordDetailView({
                   </div>
                 )}
               </Section>
-            )}
+            ) : null}
           </>
         )}
       </div>
