@@ -1,7 +1,7 @@
-/**
- * VocaVision Admin Dashboard
- * 메인 대시보드 컴포넌트
- */
+// ============================================
+// VocaVision Admin Dashboard - Main Page
+// 전체 어드민 대시보드 페이지
+// ============================================
 
 'use client';
 
@@ -15,19 +15,25 @@ import {
   ReviewModal,
   WordDetailView,
 } from './WordForms';
-import { AdminWord, NavItem } from '@/types/admin.types';
+import { VocaWord, VocaContentFull } from './types/admin.types';
+import { useWordDetail } from './hooks/useAdminApi';
 
-// ============================================
-// Navigation Items
-// ============================================
+// ---------------------------------------------
+// Sidebar Navigation
+// ---------------------------------------------
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+}
 
 const navItems: NavItem[] = [
   {
     id: 'dashboard',
     label: '대시보드',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
       </svg>
     ),
   },
@@ -35,175 +41,153 @@ const navItems: NavItem[] = [
     id: 'words',
     label: '단어 관리',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
     ),
   },
   {
     id: 'review',
-    label: '콘텐츠 검토',
+    label: '검토 대기',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     ),
-    badge: 12,
   },
   {
-    id: 'generation',
-    label: 'AI 생성',
+    id: 'sets',
+    label: '단어장',
     icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-  },
-  {
-    id: 'settings',
-    label: '설정',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
     ),
   },
 ];
 
-// ============================================
+// ---------------------------------------------
 // Sidebar Component
-// ============================================
-
+// ---------------------------------------------
 interface SidebarProps {
-  activeTab: string;
-  onTabChange: (tabId: string) => void;
-  collapsed: boolean;
-  onToggle: () => void;
+  activeNav: string;
+  onNavChange: (id: string) => void;
 }
 
-function Sidebar({ activeTab, onTabChange, collapsed, onToggle }: SidebarProps) {
+const Sidebar: React.FC<SidebarProps> = ({ activeNav, onNavChange }) => {
   return (
-    <aside
-      className={`
-        fixed left-0 top-0 h-full bg-greyblue text-white z-40
-        transition-all duration-300 flex flex-col
-        ${collapsed ? 'w-16' : 'w-64'}
-      `}
-    >
+    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-slate-900 text-white flex flex-col">
       {/* Logo */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
-        {!collapsed && (
-          <span className="text-xl font-bold bg-gradient-to-r from-voca-pink-400 to-voca-purple-400 bg-clip-text text-transparent">
-            VocaVision
-          </span>
-        )}
-        <button
-          onClick={onToggle}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-        >
-          <svg
-            className={`w-5 h-5 transition-transform ${collapsed ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-          </svg>
-        </button>
+      <div className="h-16 flex items-center px-6 border-b border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+            <span className="text-white font-bold">V</span>
+          </div>
+          <div>
+            <h1 className="font-bold text-lg">VocaVision</h1>
+            <p className="text-xs text-slate-400">Admin Dashboard</p>
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav className="flex-1 px-4 py-6 space-y-1">
         {navItems.map((item) => (
           <button
             key={item.id}
-            onClick={() => onTabChange(item.id)}
-            className={`
-              w-full flex items-center gap-3 px-4 py-3 transition-colors
-              ${
-                activeTab === item.id
-                  ? 'bg-white/10 text-white border-r-2 border-voca-pink-500'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }
-            `}
+            onClick={() => onNavChange(item.id)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+              activeNav === item.id
+                ? 'bg-pink-500 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
           >
             {item.icon}
-            {!collapsed && (
-              <>
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.badge && (
-                  <span className="px-2 py-0.5 text-xs bg-voca-pink-500 text-white rounded-full">
-                    {item.badge}
-                  </span>
-                )}
-              </>
+            <span className="font-medium">{item.label}</span>
+            {item.id === 'review' && (
+              <span className="ml-auto bg-amber-500 text-xs font-bold px-2 py-0.5 rounded-full">
+                12
+              </span>
             )}
           </button>
         ))}
       </nav>
 
-      {/* Footer */}
-      {!collapsed && (
-        <div className="p-4 border-t border-white/10">
-          <p className="text-xs text-gray-400">VocaVision Admin v1.0</p>
+      {/* User */}
+      <div className="p-4 border-t border-slate-800">
+        <div className="flex items-center gap-3 px-2">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
+            <span className="text-white font-bold">D</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-white truncate">Do Hurn</p>
+            <p className="text-xs text-slate-400 truncate">Admin</p>
+          </div>
+          <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
-      )}
+      </div>
     </aside>
   );
-}
+};
 
-// ============================================
+// ---------------------------------------------
 // Header Component
-// ============================================
-
-interface HeaderProps {
-  title: string;
-  sidebarCollapsed: boolean;
-}
-
-function Header({ title, sidebarCollapsed }: HeaderProps) {
+// ---------------------------------------------
+const Header: React.FC = () => {
   return (
-    <header
-      className={`
-        fixed top-0 right-0 h-16 bg-white border-b z-30
-        flex items-center justify-between px-6
-        transition-all duration-300
-        ${sidebarCollapsed ? 'left-16' : 'left-64'}
-      `}
-    >
-      <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-
+    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
+        {/* Breadcrumb could go here */}
+      </div>
+
+      <div className="flex items-center gap-3">
+        {/* Search */}
+        <div className="relative hidden md:block">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="검색..."
+            className="w-64 pl-10 pr-4 py-2 rounded-lg border border-slate-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 outline-none text-sm"
+          />
+        </div>
+
         {/* Notifications */}
-        <button className="relative p-2 rounded-lg hover:bg-gray-100">
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          <span className="absolute top-1 right-1 w-2 h-2 bg-voca-pink-500 rounded-full" />
+          <span className="absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full"></span>
         </button>
 
-        {/* User */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-voca-pink-500 to-voca-purple-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
-            A
-          </div>
-          <span className="text-sm font-medium text-gray-700">Admin</span>
-        </div>
+        {/* Settings */}
+        <button className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
       </div>
     </header>
   );
-}
+};
 
-// ============================================
-// Main Dashboard Component
-// ============================================
-
-export function AdminDashboard() {
-  // State
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+// ---------------------------------------------
+// Main Admin Dashboard Page
+// ---------------------------------------------
+export const AdminDashboard: React.FC = () => {
+  // Navigation state
+  const [activeNav, setActiveNav] = useState('dashboard');
 
   // Modal states
   const [showWordForm, setShowWordForm] = useState(false);
@@ -211,158 +195,156 @@ export function AdminDashboard() {
   const [showAIGeneration, setShowAIGeneration] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
-  // Selected word states
-  const [selectedWord, setSelectedWord] = useState<AdminWord | null>(null);
-  const [editWord, setEditWord] = useState<AdminWord | null>(null);
-  const [generatingWord, setGeneratingWord] = useState<AdminWord | null>(null);
-  const [reviewingWord, setReviewingWord] = useState<AdminWord | null>(null);
+  // Selected word for modals/detail view
+  const [selectedWord, setSelectedWord] = useState<VocaWord | null>(null);
+  const [editWord, setEditWord] = useState<VocaWord | null>(null);
 
-  // Handlers
-  const handleRefresh = useCallback(() => {
-    setRefreshKey((k) => k + 1);
+  // Word detail
+  const { word: detailWord, fetchWord, clearWord } = useWordDetail();
+
+  // Refresh trigger
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const triggerRefresh = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
   }, []);
 
-  const handleWordSelect = (word: AdminWord) => {
-    setSelectedWord(word);
-  };
+  // Handlers
+  const handleWordSelect = useCallback((word: VocaWord) => {
+    fetchWord(word.id);
+  }, [fetchWord]);
 
-  const handleAddWord = () => {
+  const handleAddWord = useCallback(() => {
     setEditWord(null);
     setShowWordForm(true);
-  };
+  }, []);
 
-  const handleEditWord = () => {
-    if (selectedWord) {
-      setEditWord(selectedWord);
+  const handleEditWord = useCallback(() => {
+    if (detailWord) {
+      setEditWord(detailWord as VocaWord);
       setShowWordForm(true);
     }
-  };
+  }, [detailWord]);
 
-  const handleGenerateContent = (word: AdminWord) => {
-    setGeneratingWord(word);
+  const handleBatchUpload = useCallback(() => {
+    setShowBatchUpload(true);
+  }, []);
+
+  const handleGenerateContent = useCallback((word: VocaWord) => {
+    setSelectedWord(word);
     setShowAIGeneration(true);
-  };
+  }, []);
 
-  const handleReview = () => {
-    if (selectedWord) {
-      setReviewingWord(selectedWord);
+  const handleReview = useCallback(() => {
+    if (detailWord) {
+      setSelectedWord(detailWord as VocaWord);
       setShowReview(true);
     }
-  };
+  }, [detailWord]);
 
-  // Get page title
-  const getPageTitle = () => {
-    const item = navItems.find((n) => n.id === activeTab);
-    return item?.label || '대시보드';
+  const handleCloseDetail = useCallback(() => {
+    clearWord();
+  }, [clearWord]);
+
+  const handleFormSuccess = useCallback(() => {
+    triggerRefresh();
+    clearWord();
+  }, [triggerRefresh, clearWord]);
+
+  // Render content based on active nav
+  const renderContent = () => {
+    switch (activeNav) {
+      case 'dashboard':
+        return <DashboardStatsView />;
+      case 'words':
+        return (
+          <WordList
+            key={refreshTrigger}
+            onWordSelect={handleWordSelect}
+            onAddWord={handleAddWord}
+            onBatchUpload={handleBatchUpload}
+            onGenerateContent={handleGenerateContent}
+          />
+        );
+      case 'review':
+        return (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold text-slate-900">검토 대기 목록</h2>
+            <p className="text-slate-500 mt-2">Coming soon...</p>
+          </div>
+        );
+      case 'sets':
+        return (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold text-slate-900">단어장 관리</h2>
+            <p className="text-slate-500 mt-2">Coming soon...</p>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
-      <Sidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
-
-      {/* Header */}
-      <Header title={getPageTitle()} sidebarCollapsed={sidebarCollapsed} />
+      <Sidebar activeNav={activeNav} onNavChange={setActiveNav} />
 
       {/* Main Content */}
-      <main
-        className={`
-          pt-16 min-h-screen transition-all duration-300
-          ${sidebarCollapsed ? 'pl-16' : 'pl-64'}
-        `}
-      >
-        <div className="p-6" key={refreshKey}>
-          {activeTab === 'dashboard' && <DashboardStatsView />}
-
-          {activeTab === 'words' && (
-            <WordList
-              onWordSelect={handleWordSelect}
-              onAddWord={handleAddWord}
-              onBatchUpload={() => setShowBatchUpload(true)}
-              onGenerateContent={handleGenerateContent}
-            />
-          )}
-
-          {activeTab === 'review' && (
-            <div className="text-center py-12 text-gray-500">
-              콘텐츠 검토 페이지 (개발 중)
-            </div>
-          )}
-
-          {activeTab === 'generation' && (
-            <div className="text-center py-12 text-gray-500">
-              AI 생성 관리 페이지 (개발 중)
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="text-center py-12 text-gray-500">
-              설정 페이지 (개발 중)
-            </div>
-          )}
-        </div>
-      </main>
-
-      {/* Word Detail Slide Panel */}
-      {selectedWord && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => setSelectedWord(null)}
-          />
-          <WordDetailView
-            word={selectedWord}
-            onClose={() => setSelectedWord(null)}
-            onEdit={handleEditWord}
-            onGenerate={() => handleGenerateContent(selectedWord)}
-            onReview={handleReview}
-          />
-        </>
-      )}
+      <div className="ml-64">
+        <Header />
+        <main className="p-6">{renderContent()}</main>
+      </div>
 
       {/* Modals */}
       <WordFormModal
         isOpen={showWordForm}
-        onClose={() => {
-          setShowWordForm(false);
-          setEditWord(null);
-        }}
+        onClose={() => setShowWordForm(false)}
         editWord={editWord}
-        onSuccess={handleRefresh}
+        onSuccess={handleFormSuccess}
       />
 
       <BatchUploadModal
         isOpen={showBatchUpload}
         onClose={() => setShowBatchUpload(false)}
-        onSuccess={handleRefresh}
+        onSuccess={triggerRefresh}
       />
 
       <AIGenerationModal
         isOpen={showAIGeneration}
         onClose={() => {
           setShowAIGeneration(false);
-          setGeneratingWord(null);
+          setSelectedWord(null);
         }}
-        word={generatingWord}
-        onSuccess={handleRefresh}
+        word={selectedWord}
+        onSuccess={handleFormSuccess}
       />
 
       <ReviewModal
         isOpen={showReview}
         onClose={() => {
           setShowReview(false);
-          setReviewingWord(null);
+          setSelectedWord(null);
         }}
-        word={reviewingWord}
-        onSuccess={handleRefresh}
+        word={selectedWord}
+        onSuccess={handleFormSuccess}
       />
+
+      {/* Word Detail Slide Panel */}
+      {detailWord && (
+        <WordDetailView
+          word={detailWord as VocaWord & { content?: VocaContentFull }}
+          onClose={handleCloseDetail}
+          onEdit={handleEditWord}
+          onGenerate={() => {
+            setSelectedWord(detailWord as VocaWord);
+            setShowAIGeneration(true);
+          }}
+          onReview={handleReview}
+        />
+      )}
     </div>
   );
-}
+};
 
 export default AdminDashboard;
