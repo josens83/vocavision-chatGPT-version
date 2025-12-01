@@ -3,7 +3,7 @@
  * 관리자 대시보드 API 라우트
  */
 
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   getDashboardStats,
   getAdminWords,
@@ -19,9 +19,30 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// All admin routes require authentication and admin role
-router.use(authenticateToken);
-router.use(requireAdmin);
+/**
+ * Admin authentication middleware
+ * Allows either:
+ * 1. JWT Bearer token with admin role
+ * 2. Query parameter 'key' matching INTERNAL_SECRET_KEY
+ * 3. Header 'x-admin-key' matching INTERNAL_SECRET_KEY
+ */
+const adminAuth = async (req: Request, res: Response, next: NextFunction) => {
+  const secretKey = (req.query.key as string) || req.headers['x-admin-key'];
+
+  // Check for internal secret key (query param or header)
+  if (secretKey && secretKey === process.env.INTERNAL_SECRET_KEY) {
+    return next();
+  }
+
+  // Fall back to JWT authentication
+  authenticateToken(req as any, res, (err?: any) => {
+    if (err) return next(err);
+    requireAdmin(req as any, res, next);
+  });
+};
+
+// All admin routes require either secret key or JWT admin auth
+router.use(adminAuth);
 
 /**
  * @swagger

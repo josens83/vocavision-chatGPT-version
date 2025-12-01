@@ -29,6 +29,9 @@ interface GenerationProgress {
 // API Base URL - NEVER use localhost
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
+// Admin Key for internal authentication (optional, falls back to JWT)
+const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+
 // ============================================
 // API Client
 // ============================================
@@ -42,6 +45,7 @@ async function apiClient<T>(
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(ADMIN_KEY ? { 'x-admin-key': ADMIN_KEY } : {}),
     ...options.headers,
   };
 
