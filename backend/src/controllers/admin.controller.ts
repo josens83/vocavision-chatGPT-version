@@ -43,7 +43,7 @@ export const getDashboardStats = async (
         _count: { id: true },
       }),
       // Content coverage counts
-      prisma.word.count({ where: { etymology: { not: null } } }),
+      prisma.word.count({ where: { etymology: { isNot: null } } }),
       prisma.mnemonic.count(),
       prisma.example.count(),
       prisma.wordImage.count(),
