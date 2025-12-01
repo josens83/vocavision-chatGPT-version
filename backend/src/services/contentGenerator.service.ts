@@ -508,36 +508,70 @@ export async function processGenerationJob(jobId: string): Promise<void> {
     });
 
     const results: BatchGenerationResult[] = [];
-    const words = job.inputWords;
+    const inputWords = job.inputWords;
 
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
+    for (let i = 0; i < inputWords.length; i++) {
+      const input = inputWords[i];
 
       try {
+        // Check if input is a UUID (word ID) or a word string
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input);
+
+        let wordRecord;
+        let wordText: string;
+
+        if (isUUID) {
+          // Input is a word ID - fetch the word from DB
+          wordRecord = await prisma.word.findUnique({
+            where: { id: input },
+          });
+          if (!wordRecord) {
+            throw new Error(`Word not found with ID: ${input}`);
+          }
+          wordText = wordRecord.word;
+        } else {
+          // Input is a word string - find or create word record
+          wordText = input.trim().toLowerCase();
+          wordRecord = await prisma.word.findFirst({
+            where: { word: wordText },
+          });
+        }
+
+        // Generate content using Claude
         const content = await generateWordContent({
-          word,
+          word: wordText,
           examCategory: job.examCategory || 'CSAT',
           cefrLevel: job.cefrLevel || 'B1',
         });
 
-        results.push({ word, success: true, content });
+        // Save generated content to database if we have a word record
+        if (wordRecord) {
+          await saveGeneratedContent(wordRecord.id, content);
+          logger.info(`Content generated and saved for word: ${wordText} (ID: ${wordRecord.id})`);
+          results.push({ word: wordText, wordId: wordRecord.id, success: true, content });
+        } else {
+          logger.warn(`Word record not found for: ${wordText}, content generated but not saved`);
+          results.push({ word: wordText, success: true, content });
+        }
 
         // Update progress
-        const progress = Math.round(((i + 1) / words.length) * 100);
+        const progress = Math.round(((i + 1) / inputWords.length) * 100);
         await prisma.contentGenerationJob.update({
           where: { id: jobId },
           data: { progress },
         });
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        logger.error(`Failed to process word ${input}:`, error);
         results.push({
-          word,
+          word: input,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: errorMsg,
         });
       }
 
       // Rate limiting
-      if (i < words.length - 1) {
+      if (i < inputWords.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
@@ -552,6 +586,8 @@ export async function processGenerationJob(jobId: string): Promise<void> {
         completedAt: new Date(),
       },
     });
+
+    logger.info(`Job ${jobId} completed. Success: ${results.filter(r => r.success).length}/${results.length}`);
   } catch (error) {
     // Update job as failed
     await prisma.contentGenerationJob.update({
