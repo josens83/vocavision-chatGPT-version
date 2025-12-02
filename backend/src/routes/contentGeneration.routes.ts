@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   generateContent,
   createBatchJob,
@@ -12,6 +12,25 @@ import {
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
+
+/**
+ * Admin authentication middleware
+ * Allows either JWT Bearer token or x-admin-key header
+ */
+const adminAuth = async (req: Request, res: Response, next: NextFunction) => {
+  const secretKey = (req.query.key as string) || req.headers['x-admin-key'];
+
+  // Check for internal secret key (query param or header)
+  if (secretKey && secretKey === process.env.INTERNAL_SECRET_KEY) {
+    return next();
+  }
+
+  // Fall back to JWT authentication
+  authenticateToken(req as any, res, (err?: any) => {
+    if (err) return next(err);
+    requireAdmin(req as any, res, next);
+  });
+};
 
 /**
  * @swagger
@@ -60,7 +79,7 @@ const router = Router();
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/generate', authenticateToken, requireAdmin, generateContent);
+router.post('/generate', adminAuth, generateContent);
 
 /**
  * @swagger
@@ -111,7 +130,7 @@ router.post('/generate', authenticateToken, requireAdmin, generateContent);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/batch', authenticateToken, requireAdmin, createBatchJob);
+router.post('/batch', adminAuth, createBatchJob);
 
 /**
  * @swagger
@@ -144,7 +163,7 @@ router.post('/batch', authenticateToken, requireAdmin, createBatchJob);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/jobs', authenticateToken, requireAdmin, listJobs);
+router.get('/jobs', adminAuth, listJobs);
 
 /**
  * @swagger
@@ -169,7 +188,7 @@ router.get('/jobs', authenticateToken, requireAdmin, listJobs);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/jobs/:jobId', authenticateToken, requireAdmin, getJobStatus);
+router.get('/jobs/:jobId', adminAuth, getJobStatus);
 
 /**
  * @swagger
@@ -196,7 +215,7 @@ router.get('/jobs/:jobId', authenticateToken, requireAdmin, getJobStatus);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/pending', authenticateToken, requireAdmin, getPendingReview);
+router.get('/pending', adminAuth, getPendingReview);
 
 /**
  * @swagger
@@ -241,7 +260,7 @@ router.get('/pending', authenticateToken, requireAdmin, getPendingReview);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/review/:wordId', authenticateToken, requireAdmin, reviewContent);
+router.post('/review/:wordId', adminAuth, reviewContent);
 
 /**
  * @swagger
@@ -268,7 +287,7 @@ router.post('/review/:wordId', authenticateToken, requireAdmin, reviewContent);
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.post('/publish/:wordId', authenticateToken, requireAdmin, publishContent);
+router.post('/publish/:wordId', adminAuth, publishContent);
 
 /**
  * @swagger
@@ -296,6 +315,6 @@ router.post('/publish/:wordId', authenticateToken, requireAdmin, publishContent)
  *       401:
  *         $ref: '#/components/responses/UnauthorizedError'
  */
-router.get('/audit/:wordId', authenticateToken, requireAdmin, getAuditHistory);
+router.get('/audit/:wordId', adminAuth, getAuditHistory);
 
 export default router;
