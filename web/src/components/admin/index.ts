@@ -25,6 +25,9 @@ export { DashboardStatsView } from './DashboardStats';
 // Word Management Components
 export { WordList } from './WordList';
 
+// Vocabulary Sets (단어장) Management
+export { VocabularySets } from './VocabularySets';
+
 // Form & Modal Components
 export {
   WordFormModal,

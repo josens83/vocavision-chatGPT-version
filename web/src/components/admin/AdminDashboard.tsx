@@ -8,6 +8,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { DashboardStatsView } from './DashboardStats';
 import { WordList } from './WordList';
+import { VocabularySets } from './VocabularySets';
 import {
   WordFormModal,
   BatchUploadModal,
@@ -367,12 +368,7 @@ export const AdminDashboard: React.FC = () => {
           />
         );
       case 'sets':
-        return (
-          <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-slate-900">단어장 관리</h2>
-            <p className="text-slate-500 mt-2">Coming soon...</p>
-          </div>
-        );
+        return <VocabularySets />;
       default:
         return null;
     }

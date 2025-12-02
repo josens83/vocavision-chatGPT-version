@@ -602,3 +602,246 @@ export const getBatchJobs = async (
     next(error);
   }
 };
+
+// ============================================
+// Collection (단어장) Management
+// ============================================
+
+export const getAdminCollections = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const collections = await prisma.collection.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Get word count for each collection
+    const collectionsWithCounts = collections.map((col) => ({
+      ...col,
+      wordCount: col.wordIds?.length || 0,
+    }));
+
+    res.json({ collections: collectionsWithCounts });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAdminCollectionById = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { collectionId } = req.params;
+
+    const collection = await prisma.collection.findUnique({
+      where: { id: collectionId },
+    });
+
+    if (!collection) {
+      return res.status(404).json({ message: 'Collection not found' });
+    }
+
+    // Get words in this collection
+    const words = collection.wordIds?.length
+      ? await prisma.word.findMany({
+          where: { id: { in: collection.wordIds } },
+          select: {
+            id: true,
+            word: true,
+            definition: true,
+            definitionKo: true,
+            examCategory: true,
+            level: true,
+            difficulty: true,
+            status: true,
+          },
+        })
+      : [];
+
+    res.json({
+      ...collection,
+      words,
+      wordCount: words.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createAdminCollection = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { name, description, icon, category, difficulty, isPublic, wordIds } = req.body;
+
+    if (!name || !category || !difficulty) {
+      return res.status(400).json({
+        message: 'Name, category, and difficulty are required',
+      });
+    }
+
+    const collection = await prisma.collection.create({
+      data: {
+        name,
+        description: description || null,
+        icon: icon || null,
+        category,
+        difficulty,
+        isPublic: isPublic ?? true,
+        wordIds: wordIds || [],
+      },
+    });
+
+    res.status(201).json({ collection });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAdminCollection = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { collectionId } = req.params;
+    const { name, description, icon, category, difficulty, isPublic, wordIds } = req.body;
+
+    const existing = await prisma.collection.findUnique({
+      where: { id: collectionId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Collection not found' });
+    }
+
+    const collection = await prisma.collection.update({
+      where: { id: collectionId },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(description !== undefined && { description }),
+        ...(icon !== undefined && { icon }),
+        ...(category !== undefined && { category }),
+        ...(difficulty !== undefined && { difficulty }),
+        ...(isPublic !== undefined && { isPublic }),
+        ...(wordIds !== undefined && { wordIds }),
+      },
+    });
+
+    res.json({ collection });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdminCollection = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { collectionId } = req.params;
+
+    const existing = await prisma.collection.findUnique({
+      where: { id: collectionId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Collection not found' });
+    }
+
+    await prisma.collection.delete({
+      where: { id: collectionId },
+    });
+
+    res.json({ message: 'Collection deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addWordsToCollection = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { collectionId } = req.params;
+    const { wordIds } = req.body;
+
+    if (!Array.isArray(wordIds) || wordIds.length === 0) {
+      return res.status(400).json({ message: 'wordIds array is required' });
+    }
+
+    const existing = await prisma.collection.findUnique({
+      where: { id: collectionId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Collection not found' });
+    }
+
+    // Merge existing wordIds with new ones (avoid duplicates)
+    const existingWordIds = existing.wordIds || [];
+    const newWordIds = [...new Set([...existingWordIds, ...wordIds])];
+
+    const collection = await prisma.collection.update({
+      where: { id: collectionId },
+      data: { wordIds: newWordIds },
+    });
+
+    res.json({
+      collection,
+      added: wordIds.length,
+      total: newWordIds.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeWordsFromCollection = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { collectionId } = req.params;
+    const { wordIds } = req.body;
+
+    if (!Array.isArray(wordIds) || wordIds.length === 0) {
+      return res.status(400).json({ message: 'wordIds array is required' });
+    }
+
+    const existing = await prisma.collection.findUnique({
+      where: { id: collectionId },
+    });
+
+    if (!existing) {
+      return res.status(404).json({ message: 'Collection not found' });
+    }
+
+    // Remove specified wordIds
+    const existingWordIds = existing.wordIds || [];
+    const newWordIds = existingWordIds.filter((id) => !wordIds.includes(id));
+
+    const collection = await prisma.collection.update({
+      where: { id: collectionId },
+      data: { wordIds: newWordIds },
+    });
+
+    res.json({
+      collection,
+      removed: wordIds.length,
+      total: newWordIds.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
