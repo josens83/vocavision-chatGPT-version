@@ -255,14 +255,14 @@ export const getAdminWordById = async (
         id: c.id,
         phrase: c.phrase,
         translation: c.translation,
-        example: c.example,
+        example: c.exampleEn,
       })) || [],
 
       // Rhyming
       rhymingWords: word.rhymingWords || [],
 
       // Mnemonic
-      mnemonic: word.mnemonics?.[0]?.association,
+      mnemonic: word.mnemonics?.[0]?.content,
       mnemonicImage: word.mnemonics?.[0]?.imageUrl,
 
       // Examples
@@ -270,7 +270,6 @@ export const getAdminWordById = async (
         id: e.id,
         sentence: e.sentence,
         translation: e.translation,
-        difficulty: e.difficulty,
         source: e.source,
       })) || [],
 
