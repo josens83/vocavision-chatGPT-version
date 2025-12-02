@@ -395,9 +395,9 @@ const WordTable: React.FC<WordTableProps> = ({
                   )}
                   <div>
                     <p className="font-semibold text-slate-900">{word.word}</p>
-                    {word.partOfSpeech.length > 0 && (
+                    {word.partOfSpeech && (
                       <p className="text-xs text-slate-400">
-                        {word.partOfSpeech.join(', ')}
+                        {Array.isArray(word.partOfSpeech) ? word.partOfSpeech.join(', ') : word.partOfSpeech}
                       </p>
                     )}
                   </div>
