@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Spinner } from './ui';
 import {
   DashboardStats,
@@ -189,6 +189,22 @@ export const DashboardStatsView: React.FC<DashboardStatsViewProps> = ({
 }) => {
   const { stats, loading, error, fetchStats } = useDashboardStats();
 
+  // Hide workflow guide toggle (persisted in localStorage)
+  const [hideWorkflowGuide, setHideWorkflowGuide] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('hideWorkflowGuide') === 'true';
+    }
+    return false;
+  });
+
+  const toggleWorkflowGuide = () => {
+    const newValue = !hideWorkflowGuide;
+    setHideWorkflowGuide(newValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hideWorkflowGuide', String(newValue));
+    }
+  };
+
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
@@ -264,9 +280,9 @@ export const DashboardStatsView: React.FC<DashboardStatsViewProps> = ({
     color: '#FF6699',
   }));
 
-  // Level data
+  // Level data (handle UNKNOWN separately)
   const levelData = Object.entries(stats.byLevel || {}).map(([key, value]) => ({
-    label: key,
+    label: key === 'UNKNOWN' ? '미지정' : (LEVEL_LABELS[key as keyof typeof LEVEL_LABELS] || key),
     value: value as number,
     color: LEVEL_COLORS[key as keyof typeof LEVEL_COLORS] || '#94A3B8',
   }));
@@ -293,38 +309,59 @@ export const DashboardStatsView: React.FC<DashboardStatsViewProps> = ({
       </div>
 
       {/* Daily Workflow Guide */}
-      <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 rounded-xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-pink-500 text-white flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="font-semibold text-slate-900 text-sm">오늘의 작업 루틴</h3>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
-              <span className="inline-flex items-center gap-1">
-                <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-xs flex items-center justify-center font-medium">1</span>
-                콘텐츠 없는 단어 → AI 생성
-              </span>
-              <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      {!hideWorkflowGuide && (
+        <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-100 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-pink-500 text-white flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-xs flex items-center justify-center font-medium">2</span>
-                검토 대기 → 승인/수정
-              </span>
-              <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center font-medium">3</span>
-                발행 단어 수 확인
-              </span>
             </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-slate-900 text-sm">오늘의 작업 루틴</h3>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-xs flex items-center justify-center font-medium">1</span>
+                  콘텐츠 없는 단어 → AI 생성
+                </span>
+                <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-xs flex items-center justify-center font-medium">2</span>
+                  검토 대기 → 승인/수정
+                </span>
+                <svg className="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center font-medium">3</span>
+                  발행 단어 수 확인
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={toggleWorkflowGuide}
+              className="p-1 text-slate-400 hover:text-slate-600 hover:bg-white/50 rounded transition-colors"
+              title="숨기기"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Show Workflow Guide Button (when hidden) */}
+      {hideWorkflowGuide && (
+        <button
+          onClick={toggleWorkflowGuide}
+          className="text-sm text-slate-400 hover:text-slate-600 underline"
+        >
+          작업 루틴 가이드 보기
+        </button>
+      )}
 
       {/* Main Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

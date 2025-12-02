@@ -65,12 +65,11 @@ export const getDashboardStats = async (
       }
     }
 
-    // Convert level counts to Record
+    // Convert level counts to Record (handle null as 'UNKNOWN')
     const byLevel: Record<string, number> = {};
     for (const l of wordsByLevel) {
-      if (l.difficulty) {
-        byLevel[l.difficulty] = l._count.id;
-      }
+      const level = l.difficulty || 'UNKNOWN';
+      byLevel[level] = l._count.id;
     }
 
     const stats = {
