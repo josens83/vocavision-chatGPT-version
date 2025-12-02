@@ -339,50 +339,51 @@ export const batchCreateWords = async (
   next: NextFunction
 ) => {
   try {
-    const { words, examCategory, level, generateContent } = req.body;
+    const { words, examCategory, level } = req.body;
 
     if (!Array.isArray(words) || words.length === 0) {
       return res.status(400).json({ message: 'Words array is required' });
     }
 
-    const results = {
-      created: 0,
-      failed: [] as string[],
-    };
+    // Normalize all words to lowercase
+    const normalizedWords = words.map((w: string) => w.toLowerCase().trim());
 
-    for (const wordText of words) {
-      try {
-        // Check if word already exists
-        const existing = await prisma.word.findFirst({
-          where: { word: { equals: wordText, mode: 'insensitive' } },
-        });
+    // Get all existing words in ONE query (much faster!)
+    const existingWords = await prisma.word.findMany({
+      where: {
+        word: { in: normalizedWords, mode: 'insensitive' },
+      },
+      select: { word: true },
+    });
 
-        if (existing) {
-          results.failed.push(wordText);
-          continue;
-        }
+    const existingSet = new Set(existingWords.map((w) => w.word.toLowerCase()));
 
-        await prisma.word.create({
-          data: {
-            word: wordText,
-            definition: '',
-            partOfSpeech: 'NOUN',
-            examCategory: examCategory || 'CSAT',
-            cefrLevel: level || 'B1',
-            difficulty: 'INTERMEDIATE',
-            level: 'L1',
-            frequency: 100,
-            status: 'DRAFT',
-          },
-        });
+    // Filter out existing words
+    const newWords = normalizedWords.filter((w) => !existingSet.has(w));
+    const skippedWords = normalizedWords.filter((w) => existingSet.has(w));
 
-        results.created++;
-      } catch {
-        results.failed.push(wordText);
-      }
+    // Bulk create all new words at once
+    if (newWords.length > 0) {
+      await prisma.word.createMany({
+        data: newWords.map((wordText) => ({
+          word: wordText,
+          definition: '',
+          partOfSpeech: 'NOUN',
+          examCategory: examCategory || 'CSAT',
+          cefrLevel: level || 'B1',
+          difficulty: 'INTERMEDIATE',
+          level: 'L1',
+          frequency: 100,
+          status: 'DRAFT',
+        })),
+        skipDuplicates: true,
+      });
     }
 
-    res.json(results);
+    res.json({
+      created: newWords.length,
+      failed: skippedWords,
+    });
   } catch (error) {
     next(error);
   }
