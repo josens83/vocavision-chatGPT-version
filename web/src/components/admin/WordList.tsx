@@ -274,6 +274,7 @@ interface WordTableProps {
   loading: boolean;
   onRowClick: (word: VocaWord) => void;
   onGenerateClick: (word: VocaWord) => void;
+  onDeleteClick?: (wordId: string, wordName: string) => void;
   selectedIds: string[];
   onSelectChange: (ids: string[]) => void;
 }
@@ -283,6 +284,7 @@ const WordTable: React.FC<WordTableProps> = ({
   loading,
   onRowClick,
   onGenerateClick,
+  onDeleteClick,
   selectedIds,
   onSelectChange,
 }) => {
@@ -473,7 +475,7 @@ const WordTable: React.FC<WordTableProps> = ({
                 )}
               </td>
               <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-1">
                   {/* AI 생성/재생성 버튼 */}
                   <button
                     onClick={() => onGenerateClick(word)}
@@ -502,6 +504,23 @@ const WordTable: React.FC<WordTableProps> = ({
                       )}
                     </svg>
                   </button>
+                  {/* 삭제 버튼 */}
+                  {onDeleteClick && (
+                    <button
+                      onClick={() => onDeleteClick(word.id, word.word)}
+                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="삭제"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  )}
                   <button
                     className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                     title="상세 보기"
@@ -617,6 +636,8 @@ interface WordListProps {
   onGenerateContent: (word: VocaWord) => void;
   /** 여러 단어 일괄 AI 생성 */
   onBatchGenerate?: (wordIds: string[]) => void;
+  /** 단어 삭제 */
+  onDeleteWord?: (wordId: string) => void;
   /** 초기 필터 설정 (검토 대기 목록 등에서 사용) */
   initialFilters?: Partial<WordFilters>;
   /** 헤더 타이틀 커스텀 */
@@ -641,6 +662,7 @@ export const WordList: React.FC<WordListProps> = ({
   onBatchUpload,
   onGenerateContent,
   onBatchGenerate,
+  onDeleteWord,
   initialFilters = {},
   title = '단어 관리',
   hideFilters = false,
@@ -655,6 +677,9 @@ export const WordList: React.FC<WordListProps> = ({
   const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
   const [bulkStatusError, setBulkStatusError] = useState<string | null>(null);
   const [bulkStatusSuccess, setBulkStatusSuccess] = useState(false);
+
+  // Quick bulk action loading state
+  const [quickActionLoading, setQuickActionLoading] = useState(false);
 
   const [filters, setFilters] = useState<WordFilters>({
     search: '',
@@ -741,6 +766,73 @@ export const WordList: React.FC<WordListProps> = ({
     }
   };
 
+  // Quick bulk approve (direct without modal)
+  const handleQuickBulkApprove = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`${selectedIds.length}개 단어를 승인하시겠습니까?`)) return;
+
+    setQuickActionLoading(true);
+    try {
+      await apiClient<{ updated: number }>(
+        '/admin/words/bulk-status',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            wordIds: selectedIds,
+            status: 'APPROVED',
+          }),
+        }
+      );
+      alert(`${selectedIds.length}개 단어가 승인되었습니다.`);
+      setSelectedIds([]);
+      fetchWords({ ...filters, search: debouncedSearch });
+    } catch (err) {
+      alert(`승인 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setQuickActionLoading(false);
+    }
+  };
+
+  // Quick bulk publish (direct without modal)
+  const handleQuickBulkPublish = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`${selectedIds.length}개 단어를 발행하시겠습니까?`)) return;
+
+    setQuickActionLoading(true);
+    try {
+      await apiClient<{ updated: number }>(
+        '/admin/words/bulk-status',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            wordIds: selectedIds,
+            status: 'PUBLISHED',
+          }),
+        }
+      );
+      alert(`${selectedIds.length}개 단어가 발행되었습니다.`);
+      setSelectedIds([]);
+      fetchWords({ ...filters, search: debouncedSearch });
+    } catch (err) {
+      alert(`발행 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setQuickActionLoading(false);
+    }
+  };
+
+  // Handle single word delete
+  const handleDeleteWord = async (wordId: string, wordName: string) => {
+    if (!confirm(`"${wordName}" 단어를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+    try {
+      await apiClient(`/admin/words/${wordId}`, { method: 'DELETE' });
+      alert('단어가 삭제되었습니다.');
+      fetchWords({ ...filters, search: debouncedSearch });
+    } catch (err) {
+      alert(`삭제 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    }
+  };
+
   // Close modal and reset states
   const handleCloseBulkStatusModal = () => {
     setShowBulkStatusModal(false);
@@ -792,6 +884,31 @@ export const WordList: React.FC<WordListProps> = ({
             <strong>{selectedIds.length}</strong>개 선택됨
           </span>
           <div className="flex items-center gap-2">
+            {/* Quick Bulk Approve */}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleQuickBulkApprove}
+              disabled={quickActionLoading}
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              일괄 승인
+            </Button>
+            {/* Quick Bulk Publish */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleQuickBulkPublish}
+              disabled={quickActionLoading}
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              일괄 발행
+            </Button>
+            {/* AI Batch Generate */}
             <Button
               variant="ghost"
               size="sm"
@@ -805,17 +922,15 @@ export const WordList: React.FC<WordListProps> = ({
               <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              AI 일괄 생성
+              AI 생성
             </Button>
+            {/* Other Status Change */}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowBulkStatusModal(true)}
             >
-              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              상태 일괄 변경
+              기타 상태
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
               선택 해제
@@ -831,6 +946,7 @@ export const WordList: React.FC<WordListProps> = ({
           loading={loading}
           onRowClick={onWordSelect}
           onGenerateClick={onGenerateContent}
+          onDeleteClick={handleDeleteWord}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
         />
