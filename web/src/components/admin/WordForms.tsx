@@ -37,6 +37,8 @@ import {
   useContentGeneration,
   useReview,
   useWordDetail,
+  useAuditLogs,
+  AuditLog,
 } from './hooks/useAdminApi';
 
 // ---------------------------------------------
@@ -930,6 +932,18 @@ interface WordDetailViewProps {
   onReview: () => void;
 }
 
+// Action labels for audit log
+const ACTION_LABELS: Record<string, string> = {
+  create: '생성',
+  update: '수정',
+  delete: '삭제',
+  publish: '발행',
+  review: '검토',
+  approve: '승인',
+  reject: '반려',
+  generate: 'AI 생성',
+};
+
 export const WordDetailView: React.FC<WordDetailViewProps> = ({
   word,
   onClose,
@@ -940,6 +954,16 @@ export const WordDetailView: React.FC<WordDetailViewProps> = ({
   const content = word.content;
   const [showJsonImport, setShowJsonImport] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  // Audit Logs
+  const { logs: auditLogs, loading: auditLoading, fetchAuditLogs } = useAuditLogs();
+
+  // Fetch audit logs when word changes
+  useEffect(() => {
+    if (word?.id) {
+      fetchAuditLogs(word.id, 5);
+    }
+  }, [word?.id, fetchAuditLogs]);
 
   // Export word data as JSON for Claude Max editing with guide template
   const handleExportJson = async () => {
@@ -1374,6 +1398,67 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories: word.exam
                     </Button>
                   </div>
                 </div>
+              </Card>
+
+              {/* Audit Log Section */}
+              <Card>
+                <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  변경 이력
+                  <span className="text-xs text-slate-400 font-normal">(최근 5개)</span>
+                </h3>
+                {auditLoading ? (
+                  <div className="flex justify-center py-4">
+                    <Spinner size="sm" />
+                  </div>
+                ) : auditLogs.length > 0 ? (
+                  <div className="space-y-2">
+                    {auditLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-start gap-3 p-2 bg-slate-50 rounded-lg text-sm"
+                      >
+                        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                          log.action === 'create' ? 'bg-green-500' :
+                          log.action === 'update' ? 'bg-blue-500' :
+                          log.action === 'delete' ? 'bg-red-500' :
+                          log.action === 'publish' ? 'bg-purple-500' :
+                          log.action === 'approve' ? 'bg-emerald-500' :
+                          log.action === 'reject' ? 'bg-orange-500' :
+                          log.action === 'generate' ? 'bg-pink-500' :
+                          'bg-gray-400'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-700">
+                              {ACTION_LABELS[log.action] || log.action}
+                            </span>
+                            {log.changedFields?.length > 0 && (
+                              <span className="text-xs text-slate-400">
+                                ({log.changedFields.slice(0, 3).join(', ')}{log.changedFields.length > 3 ? ` 외 ${log.changedFields.length - 3}개` : ''})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-0.5">
+                            {new Date(log.performedAt).toLocaleString('ko-KR', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 text-center py-4">
+                    변경 이력이 없습니다
+                  </p>
+                )}
               </Card>
             </>
           ) : (

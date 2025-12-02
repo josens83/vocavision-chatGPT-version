@@ -14,6 +14,8 @@ import {
   Checkbox,
   Spinner,
   EmptyState,
+  Modal,
+  Alert,
 } from './ui';
 import {
   VocaWord,
@@ -27,7 +29,7 @@ import {
   STATUS_COLORS,
   LEVEL_COLORS,
 } from './types/admin.types';
-import { useWordList } from './hooks/useAdminApi';
+import { useWordList, apiClient } from './hooks/useAdminApi';
 
 // ---------------------------------------------
 // Filter Panel Component
@@ -625,6 +627,14 @@ interface WordListProps {
   hideActions?: boolean;
 }
 
+// Status change options for bulk update
+const BULK_STATUS_OPTIONS = [
+  { value: 'DRAFT', label: '초안', color: 'gray' },
+  { value: 'PENDING_REVIEW', label: '검토 대기', color: 'yellow' },
+  { value: 'APPROVED', label: '승인', color: 'blue' },
+  { value: 'PUBLISHED', label: '발행', color: 'green' },
+] as const;
+
 export const WordList: React.FC<WordListProps> = ({
   onWordSelect,
   onAddWord,
@@ -638,6 +648,13 @@ export const WordList: React.FC<WordListProps> = ({
 }) => {
   const { words, pagination, loading, error, fetchWords } = useWordList();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Bulk Status Change Modal State
+  const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
+  const [bulkStatusTarget, setBulkStatusTarget] = useState<string>('APPROVED');
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
+  const [bulkStatusError, setBulkStatusError] = useState<string | null>(null);
+  const [bulkStatusSuccess, setBulkStatusSuccess] = useState(false);
 
   const [filters, setFilters] = useState<WordFilters>({
     search: '',
@@ -688,6 +705,48 @@ export const WordList: React.FC<WordListProps> = ({
   const handlePageChange = useCallback((page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   }, []);
+
+  // Handle bulk status change
+  const handleBulkStatusChange = async () => {
+    if (selectedIds.length === 0) return;
+
+    setBulkStatusLoading(true);
+    setBulkStatusError(null);
+    setBulkStatusSuccess(false);
+
+    try {
+      const result = await apiClient<{ updated: number; message: string }>(
+        '/admin/words/bulk-status',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            wordIds: selectedIds,
+            status: bulkStatusTarget,
+          }),
+        }
+      );
+
+      setBulkStatusSuccess(true);
+      // Refresh word list after 1.5 seconds
+      setTimeout(() => {
+        setShowBulkStatusModal(false);
+        setBulkStatusSuccess(false);
+        setSelectedIds([]);
+        fetchWords({ ...filters, search: debouncedSearch });
+      }, 1500);
+    } catch (err) {
+      setBulkStatusError(err instanceof Error ? err.message : '상태 변경 실패');
+    } finally {
+      setBulkStatusLoading(false);
+    }
+  };
+
+  // Close modal and reset states
+  const handleCloseBulkStatusModal = () => {
+    setShowBulkStatusModal(false);
+    setBulkStatusError(null);
+    setBulkStatusSuccess(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -748,6 +807,16 @@ export const WordList: React.FC<WordListProps> = ({
               </svg>
               AI 일괄 생성
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowBulkStatusModal(true)}
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              상태 일괄 변경
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>
               선택 해제
             </Button>
@@ -777,6 +846,115 @@ export const WordList: React.FC<WordListProps> = ({
           />
         )}
       </Card>
+
+      {/* Bulk Status Change Confirm Modal */}
+      <Modal
+        isOpen={showBulkStatusModal}
+        onClose={handleCloseBulkStatusModal}
+        title="상태 일괄 변경"
+        size="md"
+      >
+        <div className="space-y-4">
+          {bulkStatusSuccess ? (
+            <Alert type="success" title="변경 완료!">
+              {selectedIds.length}개 단어의 상태가 변경되었습니다.
+            </Alert>
+          ) : (
+            <>
+              {/* Warning Message */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <h4 className="font-medium text-amber-800">주의</h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      <strong>{selectedIds.length}개</strong> 단어의 상태를 일괄 변경합니다.
+                      이 작업은 되돌릴 수 없습니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {bulkStatusError && (
+                <Alert type="error" title="오류">
+                  {bulkStatusError}
+                </Alert>
+              )}
+
+              {/* Status Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  변경할 상태 선택
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {BULK_STATUS_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setBulkStatusTarget(option.value)}
+                      className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        bulkStatusTarget === option.value
+                          ? 'border-pink-500 bg-pink-50'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-3 h-3 rounded-full ${
+                          option.value === 'DRAFT' ? 'bg-gray-400' :
+                          option.value === 'PENDING_REVIEW' ? 'bg-yellow-400' :
+                          option.value === 'APPROVED' ? 'bg-blue-400' :
+                          option.value === 'PUBLISHED' ? 'bg-green-400' : 'bg-gray-400'
+                        }`} />
+                        <span className="font-medium text-slate-700">{option.label}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected Words Preview */}
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-sm text-slate-500 mb-2">선택된 단어:</p>
+                <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                  {words
+                    .filter((w) => selectedIds.includes(w.id))
+                    .slice(0, 10)
+                    .map((w) => (
+                      <Badge key={w.id} color="gray" size="sm">
+                        {w.word}
+                      </Badge>
+                    ))}
+                  {selectedIds.length > 10 && (
+                    <Badge color="gray" size="sm">
+                      +{selectedIds.length - 10}개
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <Button
+                  variant="outline"
+                  onClick={handleCloseBulkStatusModal}
+                  disabled={bulkStatusLoading}
+                >
+                  취소
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleBulkStatusChange}
+                  loading={bulkStatusLoading}
+                >
+                  {selectedIds.length}개 단어 상태 변경
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

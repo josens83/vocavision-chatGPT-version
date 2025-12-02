@@ -678,7 +678,7 @@ export const createAdminCollection = async (
   next: NextFunction
 ) => {
   try {
-    const { name, description, icon, category, difficulty, isPublic, wordIds } = req.body;
+    const { name, slug, description, icon, category, difficulty, isPublic, wordIds } = req.body;
 
     if (!name || !category || !difficulty) {
       return res.status(400).json({
@@ -686,9 +686,17 @@ export const createAdminCollection = async (
       });
     }
 
+    // Auto-generate slug if not provided
+    const finalSlug = slug || name
+      .toLowerCase()
+      .replace(/[^a-z0-9가-힣\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .substring(0, 50);
+
     const collection = await prisma.collection.create({
       data: {
         name,
+        slug: finalSlug,
         description: description || null,
         icon: icon || null,
         category,
@@ -711,7 +719,7 @@ export const updateAdminCollection = async (
 ) => {
   try {
     const { collectionId } = req.params;
-    const { name, description, icon, category, difficulty, isPublic, wordIds } = req.body;
+    const { name, slug, description, icon, category, difficulty, isPublic, wordIds } = req.body;
 
     const existing = await prisma.collection.findUnique({
       where: { id: collectionId },
@@ -725,6 +733,7 @@ export const updateAdminCollection = async (
       where: { id: collectionId },
       data: {
         ...(name !== undefined && { name }),
+        ...(slug !== undefined && { slug }),
         ...(description !== undefined && { description }),
         ...(icon !== undefined && { icon }),
         ...(category !== undefined && { category }),
@@ -843,5 +852,61 @@ export const removeWordsFromCollection = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// ============================================
+// Audit Log (변경 이력) Management
+// ============================================
+
+export const getWordAuditLogs = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { wordId } = req.params;
+    const limit = parseInt(req.query.limit as string, 10) || 5;
+
+    // Get audit logs for this word
+    const logs = await prisma.contentAuditLog.findMany({
+      where: {
+        entityType: 'Word',
+        entityId: wordId,
+      },
+      orderBy: { performedAt: 'desc' },
+      take: limit,
+    });
+
+    res.json({ logs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Helper function to create audit log entry
+export const createAuditLog = async (
+  entityType: string,
+  entityId: string,
+  action: string,
+  previousData?: any,
+  newData?: any,
+  changedFields?: string[],
+  performedById?: string
+) => {
+  try {
+    await prisma.contentAuditLog.create({
+      data: {
+        entityType,
+        entityId,
+        action,
+        previousData: previousData || null,
+        newData: newData || null,
+        changedFields: changedFields || [],
+        performedById: performedById || null,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to create audit log:', error);
   }
 };

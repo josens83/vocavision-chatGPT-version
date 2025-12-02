@@ -87,6 +87,15 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
         </p>
       )}
 
+      {/* Slug Display */}
+      {collection.slug && (
+        <div className="mt-2 flex items-center gap-2">
+          <code className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">
+            /courses/{collection.slug}
+          </code>
+        </div>
+      )}
+
       <div className="mt-4 flex items-center justify-between">
         <div className="flex items-center gap-4 text-sm text-slate-500">
           <span className="flex items-center gap-1">
@@ -102,6 +111,19 @@ const CollectionCard: React.FC<CollectionCardProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* 학습 페이지에서 보기 */}
+          {collection.slug && collection.isPublic && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(`/courses/${collection.slug}`, '_blank')}
+              title="학습 페이지에서 보기"
+            >
+              <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => onViewWords(collection)}>
             단어 보기
           </Button>
@@ -143,6 +165,7 @@ const CollectionFormModal: React.FC<CollectionFormModalProps> = ({
   const { createCollection, updateCollection, loading, error } = useCollectionMutations();
   const [form, setForm] = useState<CreateCollectionForm>({
     name: '',
+    slug: '',
     description: '',
     icon: '',
     category: 'GENERAL',
@@ -154,6 +177,7 @@ const CollectionFormModal: React.FC<CollectionFormModalProps> = ({
     if (editCollection) {
       setForm({
         name: editCollection.name,
+        slug: editCollection.slug || '',
         description: editCollection.description || '',
         icon: editCollection.icon || '',
         category: editCollection.category,
@@ -163,6 +187,7 @@ const CollectionFormModal: React.FC<CollectionFormModalProps> = ({
     } else {
       setForm({
         name: '',
+        slug: '',
         description: '',
         icon: '',
         category: 'GENERAL',
@@ -204,6 +229,14 @@ const CollectionFormModal: React.FC<CollectionFormModalProps> = ({
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           placeholder="예: 수능 필수 단어 1000"
           required
+        />
+
+        <Input
+          label="URL 슬러그"
+          value={form.slug || ''}
+          onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+          placeholder="예: csat-starter-100 (자동 생성됨)"
+          helperText="학습 페이지 URL에 사용됩니다. 비워두면 자동 생성됩니다."
         />
 
         <Textarea
