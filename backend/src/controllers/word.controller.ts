@@ -22,7 +22,10 @@ export const getWords = async (
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    const where: any = {};
+    // Only show PUBLISHED words to users
+    const where: any = {
+      status: 'PUBLISHED',
+    };
 
     if (difficulty) {
       where.difficulty = difficulty;
@@ -84,8 +87,12 @@ export const getWordById = async (
   try {
     const { id } = req.params;
 
-    const word = await prisma.word.findUnique({
-      where: { id },
+    // Only return PUBLISHED words to users
+    const word = await prisma.word.findFirst({
+      where: {
+        id,
+        status: 'PUBLISHED',
+      },
       include: {
         examples: true,
         images: true,
@@ -150,7 +157,10 @@ export const getRandomWords = async (
     const { count = '10', difficulty, examCategory } = req.query;
     const limitNum = parseInt(count as string);
 
-    const where: any = {};
+    // Only show PUBLISHED words to users
+    const where: any = {
+      status: 'PUBLISHED',
+    };
     if (difficulty) {
       where.difficulty = difficulty;
     }
@@ -188,7 +198,10 @@ export const getPublicWords = async (
     const { examCategory, limit = '10', difficulty } = req.query;
     const limitNum = Math.min(parseInt(limit as string), 50); // Max 50 for public
 
-    const where: any = {};
+    // Only show PUBLISHED words to public
+    const where: any = {
+      status: 'PUBLISHED',
+    };
 
     if (examCategory) {
       where.examCategory = examCategory;
