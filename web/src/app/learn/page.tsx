@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore, useLearningStore } from '@/lib/store';
 import { progressAPI, wordsAPI } from '@/lib/api';
 import FlashCardGesture from '@/components/learning/FlashCardGesture';
@@ -22,8 +22,21 @@ interface Review {
   word: Word;
 }
 
+// Exam name mapping
+const examNames: Record<string, string> = {
+  CSAT: '수능',
+  SAT: 'SAT',
+  TOEFL: 'TOEFL',
+  TOEIC: 'TOEIC',
+  TEPS: 'TEPS',
+};
+
 export default function LearnPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const examParam = searchParams.get('exam')?.toUpperCase();
+  const levelParam = searchParams.get('level');
+
   const user = useAuthStore((state) => state.user);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
   const {
@@ -49,7 +62,7 @@ export default function LearnPage() {
 
     loadReviews();
     startSession();
-  }, [user, hasHydrated, router]);
+  }, [user, hasHydrated, router, examParam, levelParam]);
 
   const startSession = async () => {
     try {
@@ -62,14 +75,25 @@ export default function LearnPage() {
 
   const loadReviews = async () => {
     try {
-      const data = await progressAPI.getDueReviews();
-
-      // If no reviews, get random words
-      if (data.count === 0) {
-        const randomWords = await wordsAPI.getRandomWords(10);
-        setReviews(randomWords.words.map((word: Word) => ({ word })));
+      // If exam filter is provided, load words from that exam
+      if (examParam) {
+        const data = await wordsAPI.getWords({
+          examCategory: examParam,
+          level: levelParam || undefined,
+          limit: 20,
+        });
+        const words = data.words || data.data || [];
+        setReviews(words.map((word: Word) => ({ word })));
       } else {
-        setReviews(data.reviews);
+        // Default: Get due reviews or random words
+        const data = await progressAPI.getDueReviews();
+
+        if (data.count === 0) {
+          const randomWords = await wordsAPI.getRandomWords(10);
+          setReviews(randomWords.words.map((word: Word) => ({ word })));
+        } else {
+          setReviews(data.reviews);
+        }
       }
     } catch (error) {
       console.error('Failed to load reviews:', error);
@@ -208,12 +232,17 @@ export default function LearnPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push(examParam ? `/courses/${examParam.toLowerCase()}` : '/dashboard')}
             className="text-gray-600 hover:text-gray-900"
           >
-            ← 대시보드
+            ← {examParam ? examNames[examParam] || examParam : '대시보드'}
           </button>
           <div className="text-center">
+            {examParam && (
+              <div className="text-xs text-blue-600 font-medium mb-1">
+                {examNames[examParam]} {levelParam && `- ${levelParam}`}
+              </div>
+            )}
             <div className="text-sm text-gray-600">진행 상황</div>
             <div className="text-lg font-semibold">
               {currentWordIndex + 1} / {reviews.length}

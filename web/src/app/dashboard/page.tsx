@@ -4,72 +4,62 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore, useExamCourseStore, ExamType } from '@/lib/store';
-import { progressAPI, authAPI } from '@/lib/api';
+import { progressAPI, authAPI, wordsAPI } from '@/lib/api';
 import DailyGoalWidgetEnhanced from '@/components/dashboard/DailyGoalWidgetEnhanced';
 import StreakWidget from '@/components/dashboard/StreakWidget';
 import axios from 'axios';
 
-// 시험별 코스 데이터
-const examCourses = [
+// 시험별 코스 기본 데이터
+const examCoursesBase = [
   {
     id: 'CSAT' as ExamType,
     name: '수능',
     fullName: '대학수학능력시험',
     description: '수능 1~2등급 목표',
-    wordCount: '429',
     icon: '📝',
     gradient: 'from-blue-500 to-blue-600',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-300',
-    isActive: true,  // 실제 데이터 있음
   },
   {
     id: 'SAT' as ExamType,
     name: 'SAT',
     fullName: '미국대학입학시험',
     description: 'SAT 1500+ 목표',
-    wordCount: '4,500+',
     icon: '🇺🇸',
     gradient: 'from-red-500 to-red-600',
     bgColor: 'bg-red-50',
     borderColor: 'border-red-300',
-    isActive: false,  // 준비 중
   },
   {
     id: 'TOEFL' as ExamType,
     name: 'TOEFL',
     fullName: '학술영어능력시험',
     description: 'TOEFL 100+ 목표',
-    wordCount: '5,000+',
     icon: '🌍',
     gradient: 'from-orange-500 to-orange-600',
     bgColor: 'bg-orange-50',
     borderColor: 'border-orange-300',
-    isActive: false,  // 준비 중
   },
   {
     id: 'TOEIC' as ExamType,
     name: 'TOEIC',
     fullName: '국제의사소통영어',
     description: 'TOEIC 900+ 목표',
-    wordCount: '3,500+',
     icon: '💼',
     gradient: 'from-green-500 to-green-600',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-300',
-    isActive: false,  // 준비 중
   },
   {
     id: 'TEPS' as ExamType,
     name: 'TEPS',
     fullName: '서울대영어능력시험',
     description: 'TEPS 500+ 목표',
-    wordCount: '4,000+',
     icon: '🎓',
     gradient: 'from-purple-500 to-purple-600',
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-300',
-    isActive: false,  // 준비 중
   },
 ];
 
@@ -94,6 +84,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [dueReviews, setDueReviews] = useState<DueReview>({ count: 0 });
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [wordCounts, setWordCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -109,6 +100,7 @@ export default function DashboardPage() {
 
     loadDashboardData();
     loadNotificationCount();
+    loadWordCounts();
   }, [user, hasHydrated, router]);
 
   const loadDashboardData = async () => {
@@ -139,6 +131,26 @@ export default function DashboardPage() {
       console.error('Failed to load notification count:', error);
     }
   };
+
+  const loadWordCounts = async () => {
+    try {
+      const data = await wordsAPI.getWordCounts();
+      setWordCounts(data.counts);
+    } catch (error) {
+      console.error('Failed to load word counts:', error);
+    }
+  };
+
+  // Compute exam courses with dynamic word counts
+  const examCourses = examCoursesBase.map((course) => {
+    const count = wordCounts[course.id] || 0;
+    const isActive = count > 0;
+    return {
+      ...course,
+      wordCount: count > 0 ? count.toLocaleString() : '준비 중',
+      isActive,
+    };
+  });
 
   if (!hasHydrated || loading) {
     return (
@@ -240,7 +252,7 @@ export default function DashboardPage() {
                 <div className={`mt-2 text-xs font-medium ${
                   course.isActive ? 'text-gray-700' : 'text-gray-400'
                 }`}>
-                  {course.isActive ? `${course.wordCount}개 단어` : `${course.wordCount} 단어 예정`}
+                  {course.isActive ? `${course.wordCount}개 단어` : '콘텐츠 준비 중'}
                 </div>
               </Link>
             ))}

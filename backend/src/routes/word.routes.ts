@@ -4,7 +4,8 @@ import {
   getWordById,
   createWord,
   getRandomWords,
-  getPublicWords
+  getPublicWords,
+  getWordCountsByExam
 } from '../controllers/word.controller';
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.middleware';
 
@@ -34,6 +35,36 @@ const router = Router();
  *         description: 단어 목록
  */
 router.get('/public', getPublicWords);
+
+/**
+ * @swagger
+ * /words/counts:
+ *   get:
+ *     summary: 시험별 단어 수 조회 (인증 불필요)
+ *     tags: [Words]
+ *     responses:
+ *       200:
+ *         description: 시험별 단어 수
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 counts:
+ *                   type: object
+ *                   properties:
+ *                     CSAT:
+ *                       type: integer
+ *                     SAT:
+ *                       type: integer
+ *                     TOEFL:
+ *                       type: integer
+ *                     TOEIC:
+ *                       type: integer
+ *                     TEPS:
+ *                       type: integer
+ */
+router.get('/counts', getWordCountsByExam);
 
 /**
  * @swagger

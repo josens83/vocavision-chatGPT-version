@@ -137,6 +137,10 @@ export const wordsAPI = {
     const response = await api.get('/words', { params });
     return response.data;
   },
+  getWordCounts: async (): Promise<{ counts: Record<string, number> }> => {
+    const response = await api.get('/words/counts');
+    return response.data;
+  },
   getWordById: async (id: string) => {
     const response = await api.get(`/words/${id}`);
     return response.data;
