@@ -311,6 +311,9 @@ export async function saveGeneratedContent(
         aiModel: 'claude-sonnet-4-20250514',
         aiGeneratedAt: new Date(),
         humanReviewed: false,
+
+        // Update status to pending review
+        status: 'PENDING_REVIEW',
       },
     });
 
