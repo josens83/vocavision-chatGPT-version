@@ -16,18 +16,38 @@ export const getAllCollections = async (
     });
 
     // Calculate progress for each collection if user is logged in
+    // Only count PUBLISHED words
     const collectionsWithProgress = await Promise.all(
       collections.map(async (collection) => {
-        const wordCount = collection.wordIds?.length || 0;
+        // Count only PUBLISHED words in the collection
+        const publishedWordCount = collection.wordIds?.length
+          ? await prisma.word.count({
+              where: {
+                id: { in: collection.wordIds },
+                status: 'PUBLISHED',
+              },
+            })
+          : 0;
+
         let progressCount = 0;
         let masteredCount = 0;
 
-        if (userId && wordCount > 0) {
-          // Get user's progress for words in this collection
+        if (userId && publishedWordCount > 0) {
+          // Get published word IDs first
+          const publishedWords = await prisma.word.findMany({
+            where: {
+              id: { in: collection.wordIds || [] },
+              status: 'PUBLISHED',
+            },
+            select: { id: true },
+          });
+          const publishedWordIds = publishedWords.map((w) => w.id);
+
+          // Get user's progress for published words in this collection
           const userProgress = await prisma.userProgress.findMany({
             where: {
               userId,
-              wordId: { in: collection.wordIds || [] },
+              wordId: { in: publishedWordIds },
             },
           });
 
@@ -37,13 +57,13 @@ export const getAllCollections = async (
           ).length;
         }
 
-        const progressPercentage = wordCount > 0
-          ? Math.round((masteredCount / wordCount) * 100)
+        const progressPercentage = publishedWordCount > 0
+          ? Math.round((masteredCount / publishedWordCount) * 100)
           : 0;
 
         return {
           ...collection,
-          wordCount,
+          wordCount: publishedWordCount,
           progressCount,
           masteredCount,
           progressPercentage,
@@ -74,11 +94,12 @@ export const getCollectionById = async (
       return res.status(404).json({ message: 'Collection not found' });
     }
 
-    // Get words by IDs from the collection
+    // Get words by IDs from the collection (only PUBLISHED words)
     const words = collection.wordIds?.length
       ? await prisma.word.findMany({
           where: {
             id: { in: collection.wordIds },
+            status: 'PUBLISHED', // Only show published words to users
           },
           select: {
             id: true,
