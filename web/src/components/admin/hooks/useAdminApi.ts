@@ -460,6 +460,7 @@ export function useReview() {
 export interface Collection {
   id: string;
   name: string;
+  slug: string | null;
   description: string | null;
   icon: string | null;
   category: string;
@@ -486,6 +487,7 @@ export interface CollectionWithWords extends Collection {
 
 export interface CreateCollectionForm {
   name: string;
+  slug?: string;
   description?: string;
   icon?: string;
   category: string;
@@ -669,6 +671,49 @@ export function useCollectionMutations() {
     loading,
     error,
   };
+}
+
+// ============================================
+// Audit Log Types and Hook
+// ============================================
+
+export interface AuditLog {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  previousData: any;
+  newData: any;
+  changedFields: string[];
+  performedById: string | null;
+  performedAt: string;
+}
+
+export function useAuditLogs() {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAuditLogs = useCallback(async (wordId: string, limit: number = 5) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiClient<{ logs: AuditLog[] }>(
+        `/admin/words/${wordId}/audit-logs?limit=${limit}`
+      );
+      setLogs(data.logs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch audit logs');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
+
+  return { logs, loading, error, fetchAuditLogs, clearLogs };
 }
 
 // ============================================

@@ -23,6 +23,8 @@ import {
   deleteAdminCollection,
   addWordsToCollection,
   removeWordsFromCollection,
+  // Audit Log
+  getWordAuditLogs,
 } from '../controllers/admin.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
 
@@ -243,5 +245,31 @@ router.post('/collections/:collectionId/words', addWordsToCollection);
  *       - bearerAuth: []
  */
 router.delete('/collections/:collectionId/words', removeWordsFromCollection);
+
+// ============================================
+// Audit Log Routes
+// ============================================
+
+/**
+ * @swagger
+ * /admin/words/{wordId}/audit-logs:
+ *   get:
+ *     summary: Get audit logs for a word
+ *     tags: [Admin - Audit]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: wordId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 5
+ */
+router.get('/words/:wordId/audit-logs', getWordAuditLogs);
 
 export default router;
