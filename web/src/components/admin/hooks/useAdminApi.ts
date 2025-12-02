@@ -454,6 +454,224 @@ export function useReview() {
 }
 
 // ============================================
+// Collection Types
+// ============================================
+
+export interface Collection {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  category: string;
+  difficulty: 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
+  isPublic: boolean;
+  wordIds: string[];
+  wordCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CollectionWithWords extends Collection {
+  words: Array<{
+    id: string;
+    word: string;
+    definition: string;
+    definitionKo: string | null;
+    examCategory: string;
+    level: string | null;
+    difficulty: string;
+    status: string;
+  }>;
+}
+
+export interface CreateCollectionForm {
+  name: string;
+  description?: string;
+  icon?: string;
+  category: string;
+  difficulty: 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
+  isPublic?: boolean;
+  wordIds?: string[];
+}
+
+// ============================================
+// useCollections Hook
+// ============================================
+
+export function useCollections() {
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCollections = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiClient<{ collections: Collection[] }>('/admin/collections');
+      setCollections(data.collections);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch collections');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { collections, loading, error, fetchCollections };
+}
+
+// ============================================
+// useCollectionDetail Hook
+// ============================================
+
+export function useCollectionDetail() {
+  const [collection, setCollection] = useState<CollectionWithWords | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCollection = useCallback(async (collectionId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiClient<CollectionWithWords>(
+        `/admin/collections/${collectionId}`
+      );
+      setCollection(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch collection');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const clearCollection = useCallback(() => {
+    setCollection(null);
+  }, []);
+
+  return { collection, loading, error, fetchCollection, clearCollection };
+}
+
+// ============================================
+// useCollectionMutations Hook
+// ============================================
+
+export function useCollectionMutations() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createCollection = useCallback(
+    async (data: CreateCollectionForm): Promise<Collection | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await apiClient<{ collection: Collection }>('/admin/collections', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+        return result.collection;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create collection');
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const updateCollection = useCallback(
+    async (
+      collectionId: string,
+      data: Partial<CreateCollectionForm>
+    ): Promise<Collection | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await apiClient<{ collection: Collection }>(
+          `/admin/collections/${collectionId}`,
+          {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+          }
+        );
+        return result.collection;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update collection');
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const deleteCollection = useCallback(async (collectionId: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiClient(`/admin/collections/${collectionId}`, {
+        method: 'DELETE',
+      });
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete collection');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const addWordsToCollection = useCallback(
+    async (collectionId: string, wordIds: string[]): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
+      try {
+        await apiClient(`/admin/collections/${collectionId}/words`, {
+          method: 'POST',
+          body: JSON.stringify({ wordIds }),
+        });
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to add words');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const removeWordsFromCollection = useCallback(
+    async (collectionId: string, wordIds: string[]): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
+      try {
+        await apiClient(`/admin/collections/${collectionId}/words`, {
+          method: 'DELETE',
+          body: JSON.stringify({ wordIds }),
+        });
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to remove words');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  return {
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    addWordsToCollection,
+    removeWordsFromCollection,
+    loading,
+    error,
+  };
+}
+
+// ============================================
 // Export apiClient for custom use
 // ============================================
 

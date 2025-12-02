@@ -15,6 +15,14 @@ import {
   batchCreateWords,
   bulkUpdateStatus,
   getBatchJobs,
+  // Collection management
+  getAdminCollections,
+  getAdminCollectionById,
+  createAdminCollection,
+  updateAdminCollection,
+  deleteAdminCollection,
+  addWordsToCollection,
+  removeWordsFromCollection,
 } from '../controllers/admin.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
 
@@ -154,5 +162,86 @@ router.post('/words/bulk-status', bulkUpdateStatus);
  *       - bearerAuth: []
  */
 router.get('/jobs', getBatchJobs);
+
+// ============================================
+// Collection (단어장) Routes
+// ============================================
+
+/**
+ * @swagger
+ * /admin/collections:
+ *   get:
+ *     summary: Get all collections
+ *     tags: [Admin - Collections]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/collections', getAdminCollections);
+
+/**
+ * @swagger
+ * /admin/collections/{collectionId}:
+ *   get:
+ *     summary: Get collection by ID with words
+ *     tags: [Admin - Collections]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/collections/:collectionId', getAdminCollectionById);
+
+/**
+ * @swagger
+ * /admin/collections:
+ *   post:
+ *     summary: Create a new collection
+ *     tags: [Admin - Collections]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/collections', createAdminCollection);
+
+/**
+ * @swagger
+ * /admin/collections/{collectionId}:
+ *   patch:
+ *     summary: Update a collection
+ *     tags: [Admin - Collections]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch('/collections/:collectionId', updateAdminCollection);
+
+/**
+ * @swagger
+ * /admin/collections/{collectionId}:
+ *   delete:
+ *     summary: Delete a collection
+ *     tags: [Admin - Collections]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete('/collections/:collectionId', deleteAdminCollection);
+
+/**
+ * @swagger
+ * /admin/collections/{collectionId}/words:
+ *   post:
+ *     summary: Add words to a collection
+ *     tags: [Admin - Collections]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/collections/:collectionId/words', addWordsToCollection);
+
+/**
+ * @swagger
+ * /admin/collections/{collectionId}/words:
+ *   delete:
+ *     summary: Remove words from a collection
+ *     tags: [Admin - Collections]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete('/collections/:collectionId/words', removeWordsFromCollection);
 
 export default router;
