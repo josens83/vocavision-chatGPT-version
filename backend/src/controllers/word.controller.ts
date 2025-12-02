@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../index';
+import { ExamCategory } from '@prisma/client';
 import { AppError } from '../middleware/error.middleware';
 import { AuthRequest } from '../middleware/auth.middleware';
 
@@ -196,7 +197,7 @@ export const getWordCountsByExam = async (
 ) => {
   try {
     // Get counts for each exam category (only PUBLISHED words)
-    const examCategories = ['CSAT', 'SAT', 'TOEFL', 'TOEIC', 'TEPS'];
+    const examCategories: ExamCategory[] = ['CSAT', 'SAT', 'TOEFL', 'TOEIC', 'TEPS'];
 
     const counts = await Promise.all(
       examCategories.map(async (exam) => {
