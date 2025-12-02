@@ -188,6 +188,40 @@ export const getRandomWords = async (
   }
 };
 
+// Get word counts by exam category (for dashboard)
+export const getWordCountsByExam = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Get counts for each exam category (only PUBLISHED words)
+    const examCategories = ['CSAT', 'SAT', 'TOEFL', 'TOEIC', 'TEPS'];
+
+    const counts = await Promise.all(
+      examCategories.map(async (exam) => {
+        const count = await prisma.word.count({
+          where: {
+            examCategory: exam,
+            status: 'PUBLISHED',
+          },
+        });
+        return { exam, count };
+      })
+    );
+
+    // Convert to object format
+    const result = counts.reduce((acc, { exam, count }) => {
+      acc[exam] = count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    res.json({ counts: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Public endpoint - no authentication required
 export const getPublicWords = async (
   req: Request,
