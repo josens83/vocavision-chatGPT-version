@@ -1,7 +1,7 @@
 "use client";
 
 import Hero from "./Hero";
-import { CategoryCard, CategoryGrid, vocaVisionCategories, StudyTypeCard } from "./CategoryCard";
+import { CategoryGrid, StudyTypeCard, ExamCategoryCard, examCategories } from "./CategoryCard";
 
 const studyTypes = [
   { title: "플래시카드", description: "카드 뒤집기로 단어 암기", type: "flashcard" as const, href: "/flashcards", count: 24, countLabel: "복습 대기" },
@@ -22,22 +22,22 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       <Hero />
 
-      {/* 난이도별 학습 섹션 */}
+      {/* 시험별 학습 섹션 */}
       <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-display-md font-display font-bold text-slate-900 mb-4">
-              난이도별 <span className="text-gradient">단어 학습</span>
+              시험별 <span className="text-gradient">단어 학습</span>
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              자신의 실력에 맞는 난이도를 선택하고 체계적으로 어휘력을 향상시키세요.
+              목표 시험에 맞는 필수 어휘를 체계적으로 학습하세요.
             </p>
           </div>
 
-          <CategoryGrid columns={4}>
-            {vocaVisionCategories.map((category, index) => (
+          <CategoryGrid columns={3}>
+            {examCategories.map((category, index) => (
               <div key={category.title} className="opacity-0 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s`, animationFillMode: "forwards" }}>
-                <CategoryCard {...category} />
+                <ExamCategoryCard {...category} />
               </div>
             ))}
           </CategoryGrid>
@@ -189,12 +189,12 @@ export default function HomePage() {
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">레벨</h4>
+              <h4 className="font-semibold mb-4">시험별 학습</h4>
               <ul className="space-y-2 text-sm text-slate-400">
-                <li><a href="/words?level=beginner" className="hover:text-white transition-colors">Beginner</a></li>
-                <li><a href="/words?level=intermediate" className="hover:text-white transition-colors">Intermediate</a></li>
-                <li><a href="/words?level=advanced" className="hover:text-white transition-colors">Advanced</a></li>
-                <li><a href="/words?level=expert" className="hover:text-white transition-colors">Expert</a></li>
+                <li><a href="/courses/csat" className="hover:text-white transition-colors">수능 (CSAT)</a></li>
+                <li><a href="/courses/sat" className="hover:text-white transition-colors">SAT</a></li>
+                <li><a href="/courses/toefl" className="hover:text-white transition-colors">TOEFL</a></li>
+                <li><a href="/courses/toeic" className="hover:text-white transition-colors">TOEIC</a></li>
               </ul>
             </div>
 
