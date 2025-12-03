@@ -231,8 +231,8 @@ export const AdminDashboard: React.FC = () => {
   // Word detail
   const { word: detailWord, fetchWord, clearWord } = useWordDetail();
 
-  // Dashboard stats for pending review count
-  const { stats, fetchStats } = useDashboardStats();
+  // Dashboard stats for pending review count (shared with DashboardStatsView)
+  const { stats, loading: statsLoading, error: statsError, fetchStats } = useDashboardStats();
 
   // Batch generation
   const { startBatchGeneration, error: batchError } = useBatchGeneration();
@@ -318,6 +318,10 @@ export const AdminDashboard: React.FC = () => {
             onNavigateToWords={() => setActiveNav('words')}
             onNavigateToPublished={() => setActiveNav('published')}
             onNavigateToDraft={() => setActiveNav('draft')}
+            externalStats={stats}
+            externalLoading={statsLoading}
+            externalError={statsError}
+            externalFetchStats={fetchStats}
           />
         );
       case 'words':
