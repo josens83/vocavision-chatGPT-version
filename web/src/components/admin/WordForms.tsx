@@ -26,8 +26,12 @@ import {
   ReviewForm,
   ExamCategory,
   DifficultyLevel,
+  ExamWithLevel,
   EXAM_CATEGORY_LABELS,
   LEVEL_LABELS,
+  LEVEL_SHORT_LABELS,
+  LEVEL_TO_DB,
+  EXAM_LEVEL_OPTIONS,
   STATUS_LABELS,
   STATUS_COLORS,
   LEVEL_COLORS,
@@ -62,7 +66,7 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
   const [form, setForm] = useState<CreateWordForm>({
     word: '',
     examCategories: [],
-    level: 'B1',
+    level: 'BEGINNER',
     topics: [],
     generateContent: false,
   });
@@ -83,7 +87,7 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
       setForm({
         word: '',
         examCategories: [],
-        level: 'B1',
+        level: 'BEGINNER',
         topics: [],
         generateContent: false,
       });
@@ -200,7 +204,7 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
                     : {}
                 }
               >
-                {level}
+                {LEVEL_SHORT_LABELS[level]}
               </button>
             ))}
           </div>
@@ -298,8 +302,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
 
   const [form, setForm] = useState<BatchCreateForm>({
     words: '',
-    examCategory: 'CSAT',
-    level: 'B1',
+    examWithLevel: 'CSAT-BEGINNER',
     generateContent: false,
   });
 
@@ -307,6 +310,9 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
     created: number;
     failed: string[];
   } | null>(null);
+
+  // Get selected option details
+  const selectedOption = EXAM_LEVEL_OPTIONS.find(opt => opt.value === form.examWithLevel);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,8 +336,7 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
     setResult(null);
     setForm({
       words: '',
-      examCategory: 'CSAT',
-      level: 'B1',
+      examWithLevel: 'CSAT-BEGINNER',
       generateContent: false,
     });
     onClose();
@@ -344,11 +349,16 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
           {/* Results */}
           <Alert type="success" title="업로드 완료">
             {result.created}개 단어가 추가되었습니다.
+            {selectedOption && (
+              <span className="block text-sm mt-1">
+                ({EXAM_CATEGORY_LABELS[selectedOption.exam]} - {LEVEL_SHORT_LABELS[selectedOption.level]})
+              </span>
+            )}
           </Alert>
 
           {result.failed.length > 0 && (
-            <Alert type="error" title="실패한 단어">
-              {result.failed.length}개 단어 처리 실패:{' '}
+            <Alert type="error" title="이미 존재하는 단어">
+              {result.failed.length}개 단어 건너뜀:{' '}
               {result.failed.slice(0, 10).join(', ')}
               {result.failed.length > 10 && ` 외 ${result.failed.length - 10}개`}
             </Alert>
@@ -368,6 +378,37 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
             </Alert>
           )}
 
+          {/* Combined Exam + Level Selection */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              시험 & 난이도 선택 *
+            </label>
+            <Select
+              value={form.examWithLevel}
+              onChange={(e) =>
+                setForm({ ...form, examWithLevel: e.target.value as ExamWithLevel })
+              }
+              options={EXAM_LEVEL_OPTIONS.map((opt) => ({
+                value: opt.value,
+                label: opt.label,
+              }))}
+            />
+            {selectedOption && (
+              <p className="text-sm text-slate-500 mt-2">
+                선택됨: <span className="font-medium text-slate-700">{EXAM_CATEGORY_LABELS[selectedOption.exam]}</span>
+                {' - '}
+                <span
+                  className="font-medium px-2 py-0.5 rounded text-white text-xs"
+                  style={{ backgroundColor: LEVEL_COLORS[selectedOption.level] }}
+                >
+                  {LEVEL_SHORT_LABELS[selectedOption.level]}
+                </span>
+                {' '}
+                <span className="text-slate-400">(DB: {LEVEL_TO_DB[selectedOption.level]})</span>
+              </p>
+            )}
+          </div>
+
           {/* Words Textarea */}
           <div>
             <Textarea
@@ -377,34 +418,6 @@ export const BatchUploadModal: React.FC<BatchUploadModalProps> = ({
               onChange={(e) => setForm({ ...form, words: e.target.value })}
               rows={10}
               helperText="최대 500개까지 한 번에 업로드할 수 있습니다."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Exam Category */}
-            <Select
-              label="시험 카테고리"
-              value={form.examCategory}
-              onChange={(e) =>
-                setForm({ ...form, examCategory: e.target.value as ExamCategory })
-              }
-              options={Object.entries(EXAM_CATEGORY_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))}
-            />
-
-            {/* Level */}
-            <Select
-              label="난이도"
-              value={form.level}
-              onChange={(e) =>
-                setForm({ ...form, level: e.target.value as DifficultyLevel })
-              }
-              options={Object.entries(LEVEL_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))}
             />
           </div>
 

@@ -15,6 +15,8 @@ import {
   CreateWordForm,
   BatchCreateForm,
   ReviewForm,
+  EXAM_LEVEL_OPTIONS,
+  LEVEL_TO_DB,
 } from '../types/admin.types';
 
 // Generation progress type for AI content generation
@@ -201,9 +203,14 @@ export function useWordMutations() {
     setLoading(true);
     setError(null);
     try {
+      // Map frontend level to DB level
+      const dbLevel = data.level ? LEVEL_TO_DB[data.level] : 'L1';
       const result = await apiClient<{ word: VocaWord }>('/admin/words', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          level: dbLevel, // Send L1, L2, L3 to backend
+        }),
       });
       return result.word;
     } catch (err) {
@@ -219,11 +226,16 @@ export function useWordMutations() {
       setLoading(true);
       setError(null);
       try {
+        // Map frontend level to DB level if provided
+        const payload = { ...data };
+        if (data.level) {
+          payload.level = LEVEL_TO_DB[data.level] as any;
+        }
         const result = await apiClient<{ word: VocaWord }>(
           `/admin/words/${wordId}`,
           {
             method: 'PATCH',
-            body: JSON.stringify(data),
+            body: JSON.stringify(payload),
           }
         );
         return result.word;
@@ -263,14 +275,21 @@ export function useWordMutations() {
           .map((w) => w.trim())
           .filter((w) => w.length > 0);
 
+        // Parse combined examWithLevel to get exam and level
+        const selectedOption = EXAM_LEVEL_OPTIONS.find(opt => opt.value === data.examWithLevel);
+        const examCategory = selectedOption?.exam || 'CSAT';
+        const level = selectedOption?.level || 'BEGINNER';
+        // Map to DB level value (L1, L2, L3)
+        const dbLevel = LEVEL_TO_DB[level] || 'L1';
+
         const result = await apiClient<{ created: number; failed: string[] }>(
           '/admin/words/batch',
           {
             method: 'POST',
             body: JSON.stringify({
               words,
-              examCategory: data.examCategory,
-              level: data.level,
+              examCategory,
+              level: dbLevel,  // Send L1, L2, L3 to backend
               generateContent: data.generateContent,
             }),
           }
