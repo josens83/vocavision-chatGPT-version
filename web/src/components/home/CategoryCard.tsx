@@ -153,6 +153,193 @@ export const vocaVisionCategories: CategoryCardProps[] = [
   { title: "전문가 심화 단어", description: "원어민 수준의 표현과 관용어를 마스터합니다.", level: "expert", wordCount: 18, href: "/words?level=expert", isNew: true },
 ];
 
+// 시험 기반 카테고리 (새로 추가)
+export type ExamType = "csat" | "sat" | "toefl" | "toeic" | "teps";
+
+export interface ExamCategoryCardProps {
+  title: string;
+  fullName: string;
+  description: string;
+  examType: ExamType;
+  wordCount: number;
+  href: string;
+  icon: string;
+  isActive: boolean;
+  progress?: number;
+}
+
+const examStyles: Record<ExamType, {
+  text: string;
+  bg: string;
+  bgLight: string;
+  border: string;
+  gradient: string;
+}> = {
+  csat: {
+    text: "text-blue-600",
+    bg: "bg-blue-500",
+    bgLight: "bg-blue-50",
+    border: "hover:border-blue-400",
+    gradient: "from-blue-500 to-blue-600",
+  },
+  sat: {
+    text: "text-red-600",
+    bg: "bg-red-500",
+    bgLight: "bg-red-50",
+    border: "hover:border-red-400",
+    gradient: "from-red-500 to-red-600",
+  },
+  toefl: {
+    text: "text-orange-600",
+    bg: "bg-orange-500",
+    bgLight: "bg-orange-50",
+    border: "hover:border-orange-400",
+    gradient: "from-orange-500 to-orange-600",
+  },
+  toeic: {
+    text: "text-green-600",
+    bg: "bg-green-500",
+    bgLight: "bg-green-50",
+    border: "hover:border-green-400",
+    gradient: "from-green-500 to-green-600",
+  },
+  teps: {
+    text: "text-purple-600",
+    bg: "bg-purple-500",
+    bgLight: "bg-purple-50",
+    border: "hover:border-purple-400",
+    gradient: "from-purple-500 to-purple-600",
+  },
+};
+
+export function ExamCategoryCard({ title, fullName, description, examType, wordCount, href, icon, isActive, progress }: ExamCategoryCardProps) {
+  const styles = examStyles[examType];
+
+  if (!isActive) {
+    return (
+      <div className="block opacity-60 cursor-not-allowed">
+        <div className={`card overflow-hidden border-gray-200 transition-all duration-300`}>
+          <div className={`relative h-36 bg-gray-100 flex items-center justify-center overflow-hidden`}>
+            <div className="text-5xl">{icon}</div>
+            <div className="absolute top-3 right-3 px-2 py-1 bg-gray-400 text-white text-xs font-bold rounded-full">
+              준비 중
+            </div>
+          </div>
+          <div className="p-5">
+            <h3 className="text-lg font-display font-semibold mb-1 text-gray-400">{title}</h3>
+            <p className="text-xs text-gray-400 mb-2">{fullName}</p>
+            <p className="text-sm text-gray-400 line-clamp-2 mb-4">{description}</p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">콘텐츠 준비 중</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Link href={href} className="group block">
+      <div className={`card overflow-hidden ${styles.border} hover:shadow-lg transition-all duration-300`}>
+        <div className={`relative h-36 ${styles.bgLight} flex items-center justify-center overflow-hidden`}>
+          <div className="text-5xl transform group-hover:scale-110 transition-transform duration-300">
+            {icon}
+          </div>
+          <div className={`absolute top-3 right-3 px-2 py-1 ${styles.bg} text-white text-xs font-bold rounded-full`}>
+            학습 가능
+          </div>
+          <div className={`absolute bottom-3 left-3 px-3 py-1 rounded-full ${styles.bg} text-white text-xs font-medium`}>
+            {title}
+          </div>
+        </div>
+
+        <div className="p-5">
+          <h3 className={`text-lg font-display font-semibold mb-1 ${styles.text} group-hover:translate-x-1 transition-transform duration-200`}>
+            {title}
+          </h3>
+          <p className="text-xs text-slate-500 mb-2">{fullName}</p>
+          <p className="text-sm text-slate-500 line-clamp-2 mb-4">{description}</p>
+
+          {progress !== undefined && (
+            <div className="mb-4">
+              <div className="flex justify-between text-xs text-slate-500 mb-1">
+                <span>진행률</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="progress-bar">
+                <div className={`progress-bar__fill bg-gradient-to-r ${styles.gradient}`} style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-400">{wordCount.toLocaleString()}개 단어</span>
+            <div className={`w-8 h-8 rounded-full ${styles.bgLight} flex items-center justify-center transform group-hover:translate-x-1 transition-all duration-200`}>
+              <svg className={`w-4 h-4 ${styles.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export const examCategories: ExamCategoryCardProps[] = [
+  {
+    title: "수능",
+    fullName: "대학수학능력시험",
+    description: "수능 영어 1~2등급 목표 필수 어휘",
+    examType: "csat",
+    wordCount: 429,
+    href: "/courses/csat",
+    icon: "📝",
+    isActive: true,
+    progress: 15,
+  },
+  {
+    title: "SAT",
+    fullName: "미국 대학입학시험",
+    description: "SAT 1500+ 목표 고급 어휘",
+    examType: "sat",
+    wordCount: 0,
+    href: "/courses/sat",
+    icon: "🇺🇸",
+    isActive: false,
+  },
+  {
+    title: "TOEFL",
+    fullName: "학술 영어 능력시험",
+    description: "TOEFL 100+ 목표 학술 어휘",
+    examType: "toefl",
+    wordCount: 0,
+    href: "/courses/toefl",
+    icon: "🌍",
+    isActive: false,
+  },
+  {
+    title: "TOEIC",
+    fullName: "국제 의사소통 영어",
+    description: "TOEIC 900+ 목표 비즈니스 어휘",
+    examType: "toeic",
+    wordCount: 0,
+    href: "/courses/toeic",
+    icon: "💼",
+    isActive: false,
+  },
+  {
+    title: "TEPS",
+    fullName: "서울대 영어능력시험",
+    description: "TEPS 500+ 목표 심화 어휘",
+    examType: "teps",
+    wordCount: 0,
+    href: "/courses/teps",
+    icon: "🎓",
+    isActive: false,
+  },
+];
+
 export type StudyType = "flashcard" | "quiz" | "review" | "vocabulary";
 
 export interface StudyTypeCardProps {
