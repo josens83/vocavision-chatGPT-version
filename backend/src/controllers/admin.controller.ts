@@ -172,6 +172,13 @@ export const getAdminWords = async (
       prisma.word.count({ where }),
     ]);
 
+    // Map DB level (L1, L2, L3) to frontend DifficultyLevel (BEGINNER, INTERMEDIATE, ADVANCED)
+    const dbLevelToFrontend: Record<string, string> = {
+      L1: 'BEGINNER',
+      L2: 'INTERMEDIATE',
+      L3: 'ADVANCED',
+    };
+
     // Transform words to match frontend VocaWord type
     const transformedWords = words.map((w) => {
       // Check if word has AI-generated content
@@ -189,8 +196,8 @@ export const getAdminWords = async (
         frequency: w.frequency,
         // Transform single examCategory to array for frontend compatibility
         examCategories: w.examCategory ? [w.examCategory] : [],
-        // Map cefrLevel to level for frontend (A1-C2), fallback to B1
-        level: w.cefrLevel || 'B1',
+        // Map DB level (L1, L2, L3) to frontend (BEGINNER, INTERMEDIATE, ADVANCED)
+        level: dbLevelToFrontend[w.level || 'L1'] || 'BEGINNER',
         topics: w.tags || [],
         status: w.status,
         isActive: w.isActive,
@@ -483,6 +490,15 @@ export const batchCreateWords = async (
     const newWords = normalizedWords.filter((w) => !existingSet.has(w));
     const skippedWords = normalizedWords.filter((w) => existingSet.has(w));
 
+    // Map level to difficulty for backward compatibility
+    const levelToDifficulty: Record<string, string> = {
+      L1: 'BASIC',
+      L2: 'INTERMEDIATE',
+      L3: 'ADVANCED',
+    };
+    const wordLevel = level || 'L1';
+    const difficulty = levelToDifficulty[wordLevel] || 'INTERMEDIATE';
+
     // Bulk create all new words at once
     if (newWords.length > 0) {
       await prisma.word.createMany({
@@ -491,9 +507,8 @@ export const batchCreateWords = async (
           definition: '',
           partOfSpeech: 'NOUN',
           examCategory: examCategory || 'CSAT',
-          cefrLevel: level || 'B1',
-          difficulty: 'INTERMEDIATE',
-          level: 'L1',
+          difficulty: difficulty,
+          level: wordLevel,  // L1, L2, L3
           frequency: 100,
           status: 'DRAFT',
         })),

@@ -9,7 +9,11 @@ export type ExamCategory = 'CSAT' | 'TEPS' | 'TOEIC' | 'TOEFL' | 'SAT';
 
 export type ContentStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'PUBLISHED' | 'ARCHIVED';
 
-export type DifficultyLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+// Simplified level system: Beginner/Intermediate/Advanced (maps to L1/L2/L3 in DB)
+export type DifficultyLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+
+// Combined exam + level for easy batch selection
+export type ExamWithLevel = `${ExamCategory}-${DifficultyLevel}`;
 
 // ---------------------------------------------
 // Word & Content Types
@@ -28,6 +32,9 @@ export interface VocaWord {
   updatedAt: string;
   publishedAt?: string;
   content?: VocaContentSummary;
+  // Additional fields from backend
+  examCategory?: ExamCategory;
+  wordLevel?: string; // L1, L2, L3
 }
 
 export interface VocaContentSummary {
@@ -178,8 +185,7 @@ export interface CreateWordForm {
 
 export interface BatchCreateForm {
   words: string;  // textarea, 줄바꿈으로 구분
-  examCategory: ExamCategory;
-  level: DifficultyLevel;
+  examWithLevel: ExamWithLevel;  // Combined selection like "CSAT-BEGINNER"
   generateContent: boolean;
 }
 
@@ -215,13 +221,55 @@ export const EXAM_CATEGORY_LABELS: Record<ExamCategory, string> = {
 };
 
 export const LEVEL_LABELS: Record<DifficultyLevel, string> = {
-  A1: 'A1 (Elementary)',
-  A2: 'A2 (Pre-intermediate)',
-  B1: 'B1 (Intermediate)',
-  B2: 'B2 (Upper-intermediate)',
-  C1: 'C1 (Advanced)',
-  C2: 'C2 (Proficiency)',
+  BEGINNER: '초급 (Beginner)',
+  INTERMEDIATE: '중급 (Intermediate)',
+  ADVANCED: '고급 (Advanced)',
 };
+
+// Short labels for badges
+export const LEVEL_SHORT_LABELS: Record<DifficultyLevel, string> = {
+  BEGINNER: '초급',
+  INTERMEDIATE: '중급',
+  ADVANCED: '고급',
+};
+
+// Map to DB level values (L1, L2, L3)
+export const LEVEL_TO_DB: Record<DifficultyLevel, string> = {
+  BEGINNER: 'L1',
+  INTERMEDIATE: 'L2',
+  ADVANCED: 'L3',
+};
+
+// Reverse map from DB level to DifficultyLevel
+export const DB_TO_LEVEL: Record<string, DifficultyLevel> = {
+  L1: 'BEGINNER',
+  L2: 'INTERMEDIATE',
+  L3: 'ADVANCED',
+};
+
+// Combined exam + level options for batch upload dropdown
+export const EXAM_LEVEL_OPTIONS: { value: ExamWithLevel; label: string; exam: ExamCategory; level: DifficultyLevel }[] = [
+  // 수능
+  { value: 'CSAT-BEGINNER', label: '수능 - 초급', exam: 'CSAT', level: 'BEGINNER' },
+  { value: 'CSAT-INTERMEDIATE', label: '수능 - 중급', exam: 'CSAT', level: 'INTERMEDIATE' },
+  { value: 'CSAT-ADVANCED', label: '수능 - 고급', exam: 'CSAT', level: 'ADVANCED' },
+  // TEPS
+  { value: 'TEPS-BEGINNER', label: 'TEPS - 초급', exam: 'TEPS', level: 'BEGINNER' },
+  { value: 'TEPS-INTERMEDIATE', label: 'TEPS - 중급', exam: 'TEPS', level: 'INTERMEDIATE' },
+  { value: 'TEPS-ADVANCED', label: 'TEPS - 고급', exam: 'TEPS', level: 'ADVANCED' },
+  // TOEIC
+  { value: 'TOEIC-BEGINNER', label: 'TOEIC - 초급', exam: 'TOEIC', level: 'BEGINNER' },
+  { value: 'TOEIC-INTERMEDIATE', label: 'TOEIC - 중급', exam: 'TOEIC', level: 'INTERMEDIATE' },
+  { value: 'TOEIC-ADVANCED', label: 'TOEIC - 고급', exam: 'TOEIC', level: 'ADVANCED' },
+  // TOEFL
+  { value: 'TOEFL-BEGINNER', label: 'TOEFL - 초급', exam: 'TOEFL', level: 'BEGINNER' },
+  { value: 'TOEFL-INTERMEDIATE', label: 'TOEFL - 중급', exam: 'TOEFL', level: 'INTERMEDIATE' },
+  { value: 'TOEFL-ADVANCED', label: 'TOEFL - 고급', exam: 'TOEFL', level: 'ADVANCED' },
+  // SAT
+  { value: 'SAT-BEGINNER', label: 'SAT - 초급', exam: 'SAT', level: 'BEGINNER' },
+  { value: 'SAT-INTERMEDIATE', label: 'SAT - 중급', exam: 'SAT', level: 'INTERMEDIATE' },
+  { value: 'SAT-ADVANCED', label: 'SAT - 고급', exam: 'SAT', level: 'ADVANCED' },
+];
 
 export const STATUS_LABELS: Record<ContentStatus, string> = {
   DRAFT: '초안',
@@ -240,10 +288,7 @@ export const STATUS_COLORS: Record<ContentStatus, { bg: string; text: string }> 
 };
 
 export const LEVEL_COLORS: Record<DifficultyLevel, string> = {
-  A1: '#10B981', // green
-  A2: '#3B82F6', // blue
-  B1: '#8B5CF6', // purple
-  B2: '#F59E0B', // amber
-  C1: '#EF4444', // red
-  C2: '#EC4899', // pink
+  BEGINNER: '#10B981', // green
+  INTERMEDIATE: '#F59E0B', // amber
+  ADVANCED: '#EF4444', // red
 };

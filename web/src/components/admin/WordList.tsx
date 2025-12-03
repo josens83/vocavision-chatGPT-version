@@ -25,6 +25,7 @@ import {
   ContentStatus,
   EXAM_CATEGORY_LABELS,
   LEVEL_LABELS,
+  LEVEL_SHORT_LABELS,
   STATUS_LABELS,
   STATUS_COLORS,
   LEVEL_COLORS,
@@ -409,10 +410,11 @@ const WordTable: React.FC<WordTableProps> = ({
               </td>
               <td className="px-4 py-3">
                 <span
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold text-white"
-                  style={{ backgroundColor: LEVEL_COLORS[word.level] }}
+                  className="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold text-white"
+                  style={{ backgroundColor: LEVEL_COLORS[word.level] || '#6B7280' }}
+                  title={LEVEL_LABELS[word.level] || word.level}
                 >
-                  {word.level}
+                  {LEVEL_SHORT_LABELS[word.level] || word.level}
                 </span>
               </td>
               <td className="px-4 py-3">
