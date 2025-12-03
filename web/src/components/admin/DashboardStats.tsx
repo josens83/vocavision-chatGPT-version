@@ -176,6 +176,11 @@ interface DashboardStatsViewProps {
   onNavigateToWords?: () => void;
   onNavigateToPublished?: () => void;
   onNavigateToDraft?: () => void;
+  // Optional: receive stats from parent to avoid duplicate API calls
+  externalStats?: DashboardStats | null;
+  externalLoading?: boolean;
+  externalError?: string | null;
+  externalFetchStats?: () => void;
 }
 
 export const DashboardStatsView: React.FC<DashboardStatsViewProps> = ({
@@ -186,8 +191,17 @@ export const DashboardStatsView: React.FC<DashboardStatsViewProps> = ({
   onNavigateToWords,
   onNavigateToPublished,
   onNavigateToDraft,
+  externalStats,
+  externalLoading,
+  externalError,
+  externalFetchStats,
 }) => {
-  const { stats, loading, error, fetchStats } = useDashboardStats();
+  // Use external stats if provided (to avoid duplicate API calls), otherwise use internal hook
+  const internalHook = useDashboardStats();
+  const stats = externalStats !== undefined ? externalStats : internalHook.stats;
+  const loading = externalLoading !== undefined ? externalLoading : internalHook.loading;
+  const error = externalError !== undefined ? externalError : internalHook.error;
+  const fetchStats = externalFetchStats || internalHook.fetchStats;
 
   // Hide workflow guide toggle (persisted in localStorage)
   const [hideWorkflowGuide, setHideWorkflowGuide] = useState(() => {
@@ -205,9 +219,12 @@ export const DashboardStatsView: React.FC<DashboardStatsViewProps> = ({
     }
   };
 
+  // Only fetch if not using external stats
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (externalStats === undefined) {
+      fetchStats();
+    }
+  }, [fetchStats, externalStats]);
 
   if (loading) {
     return (
