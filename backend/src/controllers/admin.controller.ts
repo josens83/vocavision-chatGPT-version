@@ -164,17 +164,59 @@ export const getAdminWords = async (
               mnemonics: true,
             },
           },
+          images: { take: 1 },
+          mnemonics: { take: 1 },
+          etymology: true,
         },
       }),
       prisma.word.count({ where }),
     ]);
 
-    res.json({
-      words: words.map((w) => ({
-        ...w,
+    // Transform words to match frontend VocaWord type
+    const transformedWords = words.map((w) => {
+      // Check if word has AI-generated content
+      const hasContent = w.aiGeneratedAt !== null ||
+                         (w.definition && w.definition !== '') ||
+                         w.ipaUs !== null ||
+                         w._count.mnemonics > 0 ||
+                         w.etymology !== null ||
+                         w._count.examples > 0;
+
+      return {
+        id: w.id,
+        word: w.word,
+        partOfSpeech: w.partOfSpeech,
+        frequency: w.frequency,
+        // Transform single examCategory to array for frontend compatibility
+        examCategories: w.examCategory ? [w.examCategory] : [],
+        // Map cefrLevel to level for frontend (A1-C2), fallback to B1
+        level: w.cefrLevel || 'B1',
+        topics: w.tags || [],
+        status: w.status,
+        isActive: w.isActive,
+        createdAt: w.createdAt.toISOString(),
+        updatedAt: w.updatedAt.toISOString(),
+        publishedAt: w.publishedAt?.toISOString(),
+        // Build content summary for frontend
+        content: hasContent ? {
+          id: w.id,
+          humanReviewed: w.humanReviewed,
+          aiGeneratedAt: w.aiGeneratedAt?.toISOString(),
+          primaryGifUrl: w.images?.[0]?.url || null,
+        } : null,
+        // Additional fields for admin
         exampleCount: w._count.examples,
         mnemonicCount: w._count.mnemonics,
-      })),
+        // Keep original fields for reference
+        difficulty: w.difficulty,
+        cefrLevel: w.cefrLevel,
+        examCategory: w.examCategory,
+        wordLevel: w.level, // L1, L2, L3
+      };
+    });
+
+    res.json({
+      words: transformedWords,
       pagination: {
         page: pageNum,
         limit: limitNum,
