@@ -7,6 +7,14 @@ import {
   RetryConfig,
   retryMetrics,
 } from './utils/retry';
+import {
+  isMockMode,
+  mockAuthAPI,
+  mockWordsAPI,
+  mockProgressAPI,
+  mockSubscriptionAPI,
+  mockChatAPI,
+} from './mock';
 
 // Phase 2-1: Enhanced API client with retry logic and error handling
 
@@ -111,14 +119,17 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   register: async (data: { email: string; password: string; name?: string }) => {
+    if (isMockMode()) return mockAuthAPI.register(data);
     const response = await api.post('/auth/register', data);
     return response.data;
   },
   login: async (data: { email: string; password: string }) => {
+    if (isMockMode()) return mockAuthAPI.login(data);
     const response = await api.post('/auth/login', data);
     return response.data;
   },
   getProfile: async () => {
+    if (isMockMode()) return mockAuthAPI.getProfile();
     const response = await api.get('/auth/profile');
     return response.data;
   },
@@ -134,18 +145,22 @@ export const wordsAPI = {
     level?: string;
     search?: string;
   }) => {
+    if (isMockMode()) return mockWordsAPI.getWords(params);
     const response = await api.get('/words', { params });
     return response.data;
   },
   getWordCounts: async (): Promise<{ counts: Record<string, number> }> => {
+    if (isMockMode()) return mockWordsAPI.getWordCounts();
     const response = await api.get('/words/counts');
     return response.data;
   },
   getWordById: async (id: string) => {
+    if (isMockMode()) return mockWordsAPI.getWordById(id);
     const response = await api.get(`/words/${id}`);
     return response.data;
   },
   getRandomWords: async (count?: number, difficulty?: string) => {
+    if (isMockMode()) return mockWordsAPI.getRandomWords(count, difficulty);
     const response = await api.get('/words/random', {
       params: { count, difficulty },
     });
@@ -156,10 +171,12 @@ export const wordsAPI = {
 // Progress API
 export const progressAPI = {
   getUserProgress: async () => {
+    if (isMockMode()) return mockProgressAPI.getUserProgress();
     const response = await api.get('/progress');
     return response.data;
   },
   getDueReviews: async () => {
+    if (isMockMode()) return mockProgressAPI.getDueReviews();
     const response = await api.get('/progress/due');
     return response.data;
   },
@@ -170,10 +187,12 @@ export const progressAPI = {
     learningMethod?: string;
     sessionId?: string;
   }) => {
+    if (isMockMode()) return mockProgressAPI.submitReview(data);
     const response = await api.post('/progress/review', data);
     return response.data;
   },
   startSession: async () => {
+    if (isMockMode()) return mockProgressAPI.startSession();
     const response = await api.post('/progress/session/start');
     return response.data;
   },
@@ -182,6 +201,7 @@ export const progressAPI = {
     wordsStudied: number;
     wordsCorrect: number;
   }) => {
+    if (isMockMode()) return mockProgressAPI.endSession(data);
     const response = await api.post('/progress/session/end', data);
     return response.data;
   },
@@ -190,14 +210,17 @@ export const progressAPI = {
 // Subscription API
 export const subscriptionAPI = {
   createCheckout: async (plan: 'monthly' | 'yearly') => {
+    if (isMockMode()) return mockSubscriptionAPI.createCheckout(plan);
     const response = await api.post('/subscriptions/create-checkout', { plan });
     return response.data;
   },
   getStatus: async () => {
+    if (isMockMode()) return mockSubscriptionAPI.getStatus();
     const response = await api.get('/subscriptions/status');
     return response.data;
   },
   cancel: async () => {
+    if (isMockMode()) return mockSubscriptionAPI.cancel();
     const response = await api.post('/subscriptions/cancel');
     return response.data;
   },
@@ -402,12 +425,14 @@ export interface ChatMessageResponse {
 export const chatAPI = {
   // Send a message to AI assistant
   sendMessage: async (data: ChatMessageRequest): Promise<ChatMessageResponse> => {
+    if (isMockMode()) return mockChatAPI.sendMessage(data);
     const response = await api.post('/chat/message', data);
     return response.data;
   },
 
   // Get conversation history (if stored on server)
   getConversations: async (params?: { limit?: number; page?: number }) => {
+    if (isMockMode()) return mockChatAPI.getConversations();
     const response = await api.get('/chat/conversations', { params });
     return response.data;
   },
@@ -426,6 +451,7 @@ export const chatAPI = {
 
   // Get quick suggestions based on context
   getSuggestions: async (context?: string) => {
+    if (isMockMode()) return mockChatAPI.getSuggestions();
     const response = await api.get('/chat/suggestions', { params: { context } });
     return response.data;
   },
@@ -436,3 +462,6 @@ export const chatAPI = {
     return response.data;
   },
 };
+
+// Re-export mock mode utilities
+export { isMockMode, setMockMode } from './mock';
