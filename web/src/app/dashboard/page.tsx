@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore, useExamCourseStore, ExamType } from '@/lib/store';
-import { progressAPI } from '@/lib/api';
+import { progressAPI, wordsAPI } from '@/lib/api';
 import TabLayout from '@/components/layout/TabLayout';
 import { SkeletonDashboard } from '@/components/ui/Skeleton';
 import { StatsOverview } from '@/components/dashboard';
@@ -17,11 +17,35 @@ const examInfo: Record<string, { name: string; icon: string; gradient: string; c
   TEPS: { name: 'TEPS', icon: '🎓', gradient: 'from-purple-500 to-purple-600', color: 'purple' },
 };
 
-// Level info
-const levelInfo: Record<string, { name: string; description: string; target: string }> = {
-  L1: { name: '초급', description: '기초 필수 단어', target: '3등급 목표' },
-  L2: { name: '중급', description: '핵심 어휘', target: '2등급 목표' },
-  L3: { name: '고급', description: '고난도 어휘', target: '1등급 목표' },
+// Level info with improved descriptions
+const levelInfo: Record<string, {
+  name: string;
+  description: string;
+  target: string;
+  wordCount: number;
+  details: string;
+}> = {
+  L1: {
+    name: '초급',
+    description: '기초 필수 단어 1,000개',
+    target: '수능 3등급 목표',
+    wordCount: 1000,
+    details: '가장 자주 출제되는 핵심 어휘',
+  },
+  L2: {
+    name: '중급',
+    description: '핵심 심화 단어 1,000개',
+    target: '수능 2등급 목표',
+    wordCount: 1000,
+    details: '2등급 도약을 위한 필수 어휘',
+  },
+  L3: {
+    name: '고급',
+    description: '고난도 단어 1,000개',
+    target: '수능 1등급 목표',
+    wordCount: 1000,
+    details: '1등급 완성을 위한 고급 어휘',
+  },
 };
 
 interface UserStats {
@@ -91,8 +115,8 @@ export default function DashboardPage() {
   const exam = examInfo[selectedExam];
   const level = levelInfo[selectedLevel];
 
-  // Calculate progress (mock - would come from API)
-  const totalWords = 1500;
+  // Calculate progress based on selected level
+  const totalWords = level.wordCount;
   const learnedWords = stats?.totalWordsLearned || 0;
   const progressPercent = Math.min(Math.round((learnedWords / totalWords) * 100), 100);
 
@@ -190,6 +214,7 @@ export default function DashboardPage() {
                   <p className="text-sm text-gray-500">{level.description} • {level.target}</p>
                 </div>
               </div>
+              <p className="text-xs text-gray-400 mb-3">{level.details}</p>
 
               {/* Progress Bar */}
               <div className="mb-2">
@@ -229,10 +254,18 @@ export default function DashboardPage() {
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 }`}
               >
-                <p className={`font-bold ${selectedLevel === key ? 'text-blue-600' : 'text-gray-900'}`}>
-                  {info.name}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">{info.target}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`font-bold ${selectedLevel === key ? 'text-blue-600' : 'text-gray-900'}`}>
+                    {info.name}
+                  </p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    selectedLevel === key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {info.wordCount.toLocaleString()}개
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mb-1">{info.description}</p>
+                <p className="text-xs text-gray-400">{info.details}</p>
               </button>
             ))}
           </div>
