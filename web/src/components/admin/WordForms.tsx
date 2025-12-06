@@ -232,12 +232,16 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
 
         {/* Topics */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
             토픽 태그
+            <span className="text-xs text-slate-400 ml-2 font-normal">(선택사항)</span>
           </label>
+          <p className="text-xs text-slate-500 mb-2">
+            단어의 주제/분야를 분류합니다. 예: 비즈니스, 과학, 일상, 의학, 법률 등
+          </p>
           <div className="flex gap-2 mb-2">
             <Input
-              placeholder="토픽 입력 (예: business, daily)"
+              placeholder="토픽 입력 후 Enter 또는 추가 클릭"
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => {
@@ -264,6 +268,26 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
                     ×
                   </button>
                 </Badge>
+              ))}
+            </div>
+          )}
+          {form.topics.length === 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              <span className="text-xs text-slate-400">추천: </span>
+              {['비즈니스', '과학', '일상', '학술'].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      topics: [...prev.topics, suggestion],
+                    }));
+                  }}
+                  className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"
+                >
+                  +{suggestion}
+                </button>
               ))}
             </div>
           )}
