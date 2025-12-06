@@ -37,6 +37,9 @@ export {
   WordDetailView,
 } from './WordForms';
 
+// Word Image Upload Section (3-이미지 시각화)
+export { default as WordImageSection } from './WordImageSection';
+
 // Main Dashboard
 export { AdminDashboard } from './AdminDashboard';
 
