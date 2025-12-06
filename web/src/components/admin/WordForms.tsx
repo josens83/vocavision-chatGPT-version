@@ -78,9 +78,9 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
     if (editWord) {
       setForm({
         word: editWord.word,
-        examCategories: editWord.examCategories,
-        level: editWord.level,
-        topics: editWord.topics,
+        examCategories: editWord.examCategories || [],
+        level: editWord.level || 'BEGINNER',
+        topics: editWord.topics || [],
         generateContent: false,
       });
     } else {
@@ -1076,13 +1076,15 @@ export const WordDetailView: React.FC<WordDetailViewProps> = ({
     } : null;
 
     // Claude Max editing guide template
+    const examCategories = word.examCategories || [];
+    const topics = word.topics || [];
     const guideTemplate = `# VocaVision 콘텐츠 편집 요청
 
 ## 단어 정보
 - **단어**: ${word.word}
-- **난이도**: ${word.level}
-- **시험 카테고리**: ${word.examCategories.join(', ')}
-${word.topics.length > 0 ? `- **토픽**: ${word.topics.join(', ')}` : ''}
+- **난이도**: ${word.level || 'BEGINNER'}
+- **시험 카테고리**: ${examCategories.join(', ') || 'N/A'}
+${topics.length > 0 ? `- **토픽**: ${topics.join(', ')}` : ''}
 
 ## 편집 목적
 AI가 생성한 콘텐츠를 고품질로 개선해주세요.
@@ -1098,7 +1100,7 @@ AI가 생성한 콘텐츠를 고품질로 개선해주세요.
 
 ## 현재 데이터
 \`\`\`json
-${JSON.stringify({ word: word.word, level: word.level, examCategories: word.examCategories, topics: word.topics, content: contentData }, null, 2)}
+${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, content: contentData }, null, 2)}
 \`\`\`
 
 ## 응답 형식
