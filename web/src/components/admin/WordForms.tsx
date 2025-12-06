@@ -43,8 +43,11 @@ import {
   useReview,
   useWordDetail,
   useAuditLogs,
+  useVisuals,
   AuditLog,
 } from './hooks/useAdminApi';
+import WordVisualsEditor from './WordVisualsEditor';
+import { WordVisualInput } from './types/admin.types';
 
 // ---------------------------------------------
 // Word Form Modal
@@ -229,12 +232,16 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
 
         {/* Topics */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
             토픽 태그
+            <span className="text-xs text-slate-400 ml-2 font-normal">(선택사항)</span>
           </label>
+          <p className="text-xs text-slate-500 mb-2">
+            단어의 주제/분야를 분류합니다. 예: 비즈니스, 과학, 일상, 의학, 법률 등
+          </p>
           <div className="flex gap-2 mb-2">
             <Input
-              placeholder="토픽 입력 (예: business, daily)"
+              placeholder="토픽 입력 후 Enter 또는 추가 클릭"
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => {
@@ -261,6 +268,26 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
                     ×
                   </button>
                 </Badge>
+              ))}
+            </div>
+          )}
+          {form.topics.length === 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              <span className="text-xs text-slate-400">추천: </span>
+              {['비즈니스', '과학', '일상', '학술'].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      topics: [...prev.topics, suggestion],
+                    }));
+                  }}
+                  className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"
+                >
+                  +{suggestion}
+                </button>
               ))}
             </div>
           )}
@@ -1049,12 +1076,67 @@ export const WordDetailView: React.FC<WordDetailViewProps> = ({
   // Audit Logs
   const { logs: auditLogs, loading: auditLoading, fetchAuditLogs } = useAuditLogs();
 
+  // Visuals (3-Image System)
+  const {
+    visuals,
+    loading: visualsLoading,
+    saving: visualsSaving,
+    error: visualsError,
+    fetchVisuals,
+    saveVisuals,
+  } = useVisuals();
+  const [localVisuals, setLocalVisuals] = useState<WordVisualInput[]>([]);
+  const [visualsChanged, setVisualsChanged] = useState(false);
+  const [visualsSaveSuccess, setVisualsSaveSuccess] = useState(false);
+
   // Fetch audit logs when word changes
   useEffect(() => {
     if (word?.id) {
       fetchAuditLogs(word.id, 5);
     }
   }, [word?.id, fetchAuditLogs]);
+
+  // Fetch visuals when word changes
+  useEffect(() => {
+    if (word?.id) {
+      fetchVisuals(word.id);
+      setVisualsChanged(false);
+      setVisualsSaveSuccess(false);
+    }
+  }, [word?.id, fetchVisuals]);
+
+  // Sync local visuals with fetched visuals
+  useEffect(() => {
+    setLocalVisuals(
+      visuals.map((v) => ({
+        type: v.type,
+        labelEn: v.labelEn,
+        labelKo: v.labelKo,
+        captionEn: v.captionEn,
+        captionKo: v.captionKo,
+        imageUrl: v.imageUrl || undefined,
+        promptEn: v.promptEn,
+        order: v.order,
+      }))
+    );
+  }, [visuals]);
+
+  // Handle visuals change
+  const handleVisualsChange = (newVisuals: WordVisualInput[]) => {
+    setLocalVisuals(newVisuals);
+    setVisualsChanged(true);
+    setVisualsSaveSuccess(false);
+  };
+
+  // Save visuals
+  const handleSaveVisuals = async () => {
+    const success = await saveVisuals(word.id, localVisuals);
+    if (success) {
+      setVisualsChanged(false);
+      setVisualsSaveSuccess(true);
+      setTimeout(() => setVisualsSaveSuccess(false), 3000);
+    }
+  };
 
   // Export word data as JSON for Claude Max editing with guide template
   const handleExportJson = async () => {
@@ -1434,6 +1516,58 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, c
                 </Card>
               )}
 
+              {/* Visual Images (3-Image System) */}
+              <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    시각화 이미지
+                    <span className="text-xs text-slate-400 font-normal">(3-이미지 시스템)</span>
+                  </h3>
+                  {visualsChanged && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveVisuals}
+                      loading={visualsSaving}
+                      className="bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      저장
+                    </Button>
+                  )}
+                  {visualsSaveSuccess && (
+                    <Badge color="green">저장 완료!</Badge>
+                  )}
+                </div>
+
+                {visualsError && (
+                  <div className="mb-4">
+                    <Alert type="error">
+                      {visualsError}
+                    </Alert>
+                  </div>
+                )}
+
+                {visualsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner size="md" />
+                  </div>
+                ) : (
+                  <WordVisualsEditor
+                    wordId={word.id}
+                    word={word.word}
+                    visuals={visuals}
+                    onChange={handleVisualsChange}
+                    cloudinaryCloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+                  />
+                )}
+              </Card>
+
               {/* Claude Max Editing Section */}
               <Card className="bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200">
                 <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
@@ -1555,21 +1689,75 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, c
               </Card>
             </>
           ) : (
-            <div className="text-center py-12">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-                <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+            <div className="space-y-6">
+              <div className="text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">
+                  아직 콘텐츠가 없습니다
+                </h3>
+                <p className="text-slate-500 mb-4">
+                  AI를 사용하여 콘텐츠를 자동으로 생성해보세요.
+                </p>
+                <Button variant="primary" onClick={onGenerate}>
+                  AI 콘텐츠 생성
+                </Button>
               </div>
-              <h3 className="text-lg font-medium text-slate-900 mb-2">
-                아직 콘텐츠가 없습니다
-              </h3>
-              <p className="text-slate-500 mb-4">
-                AI를 사용하여 콘텐츠를 자동으로 생성해보세요.
-              </p>
-              <Button variant="primary" onClick={onGenerate}>
-                AI 콘텐츠 생성
-              </Button>
+
+              {/* Visual Images - Available even without content */}
+              <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    시각화 이미지
+                    <span className="text-xs text-slate-400 font-normal">(3-이미지 시스템)</span>
+                  </h3>
+                  {visualsChanged && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveVisuals}
+                      loading={visualsSaving}
+                      className="bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      저장
+                    </Button>
+                  )}
+                  {visualsSaveSuccess && (
+                    <Badge color="green">저장 완료!</Badge>
+                  )}
+                </div>
+
+                {visualsError && (
+                  <div className="mb-4">
+                    <Alert type="error">
+                      {visualsError}
+                    </Alert>
+                  </div>
+                )}
+
+                {visualsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner size="md" />
+                  </div>
+                ) : (
+                  <WordVisualsEditor
+                    wordId={word.id}
+                    word={word.word}
+                    visuals={visuals}
+                    onChange={handleVisualsChange}
+                    cloudinaryCloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+                  />
+                )}
+              </Card>
             </div>
           )}
         </div>
