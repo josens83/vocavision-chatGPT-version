@@ -139,6 +139,14 @@ model Word {
   reviewedAt      DateTime?
   reviewNotes     String?   // 검토 노트
 
+  // ===== 3-이미지 시각화 시스템 =====
+  imageConceptUrl       String?   // 의미 이미지 URL (dormant → 휴화산)
+  imageConceptCaption   String?   // 의미 이미지 캡션
+  imageMnemonicUrl      String?   // 연상법 이미지 URL (dormant → 문 앞 doorman)
+  imageMnemonicCaption  String?   // 연상법 이미지 캡션
+  imageRhymeUrl         String?   // 라이밍 이미지 URL
+  imageRhymeCaption     String?   // 라이밍 이미지 캡션
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

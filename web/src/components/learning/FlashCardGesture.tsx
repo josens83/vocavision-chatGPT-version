@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import WordVisualPanel from './WordVisualPanel';
 
 interface Word {
   id: string;
@@ -28,6 +29,13 @@ interface Word {
   rhymes?: any[];
   etymology?: any;
   collocations?: any[];
+  // 3-이미지 시각화 시스템
+  imageConceptUrl?: string;
+  imageConceptCaption?: string;
+  imageMnemonicUrl?: string;
+  imageMnemonicCaption?: string;
+  imageRhymeUrl?: string;
+  imageRhymeCaption?: string;
 }
 
 interface FlashCardGestureProps {
@@ -51,6 +59,14 @@ export default function FlashCardGesture({ word, onAnswer }: FlashCardGesturePro
   const englishDefinition = word.definition || '';
   const mnemonic = word.mnemonics?.[0];
   const example = word.examples?.[0];
+
+  // 3-이미지 시각화 데이터
+  const visualImages = [
+    { type: 'concept' as const, url: word.imageConceptUrl || null, caption: word.imageConceptCaption || null },
+    { type: 'mnemonic' as const, url: word.imageMnemonicUrl || null, caption: word.imageMnemonicCaption || null },
+    { type: 'rhyme' as const, url: word.imageRhymeUrl || null, caption: word.imageRhymeCaption || null },
+  ];
+  const hasVisualImages = visualImages.some((img) => img.url);
 
   return (
     <div className="space-y-4">
@@ -129,6 +145,11 @@ export default function FlashCardGesture({ word, onAnswer }: FlashCardGesturePro
                   </p>
                 )}
               </div>
+
+              {/* 3-이미지 시각화 패널 */}
+              {hasVisualImages && (
+                <WordVisualPanel images={visualImages} word={word.word} />
+              )}
 
               {/* Mnemonic */}
               {mnemonic && (
