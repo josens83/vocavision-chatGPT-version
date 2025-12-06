@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore, useLearningStore } from '@/lib/store';
 import { progressAPI, wordsAPI } from '@/lib/api';
 import FlashCardGesture from '@/components/learning/FlashCardGesture';
+import { EmptyFirstTime, CelebrateCompletion } from '@/components/ui/EmptyState';
 
 interface Word {
   id: string;
@@ -46,8 +47,36 @@ const levelNames: Record<string, string> = {
 // Loading fallback component
 function LearnPageLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-xl text-gray-500">로딩 중...</div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Skeleton Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
+            <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+            <div className="h-10 w-20 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1">
+              <div className="h-4 w-12 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2" />
+          </div>
+        </div>
+      </div>
+      {/* Skeleton Card */}
+      <div className="container mx-auto px-4 py-6 max-w-2xl">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="h-12 w-48 bg-gray-200 rounded animate-pulse mx-auto mb-4" />
+          <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mx-auto mb-6" />
+          <div className="h-24 w-full bg-gray-100 rounded-xl animate-pulse mb-6" />
+          <div className="flex gap-3 justify-center">
+            <div className="h-12 w-24 bg-gray-200 rounded-xl animate-pulse" />
+            <div className="h-12 w-24 bg-gray-200 rounded-xl animate-pulse" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -181,87 +210,26 @@ function LearnPageContent() {
   };
 
   if (!hasHydrated || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-xl text-gray-500">로딩 중...</div>
-      </div>
-    );
+    return <LearnPageLoading />;
   }
 
   if (reviews.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white rounded-2xl p-8 max-w-md text-center shadow-sm border border-gray-200">
-          <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">학습할 단어가 없습니다</h2>
-          <p className="text-gray-500 mb-6">
-            {examParam
-              ? `${examNames[examParam] || examParam} 콘텐츠가 준비 중입니다. 곧 학습할 수 있습니다!`
-              : '새로운 단어를 추가하거나 나중에 다시 시도해주세요.'}
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-lg shadow-pink-500/25"
-            >
-              홈으로
-            </button>
-            {examParam && (
-              <button
-                onClick={() => router.push('/courses')}
-                className="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium hover:bg-gray-200 transition"
-              >
-                다른 코스 보기
-              </button>
-            )}
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <EmptyFirstTime type="words" />
       </div>
     );
   }
 
   if (showResult) {
-    const accuracy = wordsStudied > 0 ? Math.round((wordsCorrect / wordsStudied) * 100) : 0;
-
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-sm border border-gray-200">
-          <div className="text-center mb-6">
-            <div className="text-6xl mb-4">🎉</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">학습 완료!</h2>
-            <p className="text-gray-500">오늘도 수고하셨어요!</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-blue-50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{wordsStudied}</div>
-              <div className="text-xs text-gray-500 mt-1">학습 단어</div>
-            </div>
-            <div className="bg-green-50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{wordsCorrect}</div>
-              <div className="text-xs text-gray-500 mt-1">정답</div>
-            </div>
-            <div className="bg-purple-50 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">{accuracy}%</div>
-              <div className="text-xs text-gray-500 mt-1">정확도</div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={handleRestart}
-              className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-xl font-bold transition shadow-lg shadow-pink-500/25"
-            >
-              다시 학습하기
-            </button>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full bg-gray-100 text-gray-700 py-4 rounded-xl font-medium hover:bg-gray-200 transition"
-            >
-              홈으로 돌아가기
-            </button>
-          </div>
-        </div>
+        <CelebrateCompletion
+          score={wordsCorrect}
+          total={wordsStudied}
+          onRetry={handleRestart}
+          onHome={() => router.push('/dashboard')}
+        />
       </div>
     );
   }

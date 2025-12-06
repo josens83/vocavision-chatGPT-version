@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { wordsAPI } from '@/lib/api';
+import { EmptySearchResults } from '@/components/ui/EmptyState';
+import { SkeletonWordCard } from '@/components/ui/Skeleton';
 
 interface Word {
   id: string;
@@ -195,15 +197,21 @@ export default function WordsPage() {
 
         {/* Words Grid */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="text-xl text-gray-600">로딩 중...</div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonWordCard key={i} />
+            ))}
           </div>
         ) : words.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
-            <div className="text-xl text-gray-600 mb-2">검색 결과가 없습니다</div>
-            <p className="text-gray-500">다른 검색어를 시도해보세요</p>
-          </div>
+          <EmptySearchResults
+            query={search || difficulty}
+            onClear={() => {
+              setSearch('');
+              setDifficulty('');
+              setPage(1);
+              loadWords();
+            }}
+          />
         ) : (
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
