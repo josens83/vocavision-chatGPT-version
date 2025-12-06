@@ -174,7 +174,7 @@ export default function DashboardPage() {
         {/* 레벨 선택 */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">학습 레벨</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {Object.entries(levelInfo).map(([key, info]) => (
               <button
                 key={key}
@@ -274,7 +274,7 @@ export default function DashboardPage() {
         {/* 학습 통계 */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">학습 통계</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div className="text-center p-4 bg-gray-50 rounded-xl">
               <p className="text-3xl font-bold text-blue-600">{stats?.totalWordsLearned || 0}</p>
               <p className="text-sm text-gray-500 mt-1">학습한 단어</p>
