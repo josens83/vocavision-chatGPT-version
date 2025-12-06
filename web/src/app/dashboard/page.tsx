@@ -7,6 +7,7 @@ import { useAuthStore, useExamCourseStore, ExamType } from '@/lib/store';
 import { progressAPI } from '@/lib/api';
 import TabLayout from '@/components/layout/TabLayout';
 import { SkeletonDashboard } from '@/components/ui/Skeleton';
+import { StatsOverview } from '@/components/dashboard';
 
 // Exam info
 const examInfo: Record<string, { name: string; icon: string; gradient: string; color: string }> = {
@@ -356,6 +357,11 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-500 mt-1">복습 대기</p>
             </div>
           </div>
+        </div>
+
+        {/* 상세 학습 통계 */}
+        <div className="mb-6">
+          <StatsOverview exam={selectedExam} />
         </div>
 
         {/* 복습 알림 */}

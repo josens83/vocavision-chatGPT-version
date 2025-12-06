@@ -42,3 +42,6 @@ export {
   type QuizQuestion as LevelTestQuestion,
   type LevelTestResult,
 } from './useLevelTest';
+
+// User Stats Hook
+export { useUserStats } from './useUserStats';
