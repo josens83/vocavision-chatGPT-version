@@ -31,6 +31,7 @@ import {
   LEVEL_LABELS,
   LEVEL_SHORT_LABELS,
   LEVEL_TO_DB,
+  DB_TO_LEVEL,
   EXAM_LEVEL_OPTIONS,
   STATUS_LABELS,
   STATUS_COLORS,
@@ -76,10 +77,26 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
   // Reset form when modal opens/closes or editWord changes
   useEffect(() => {
     if (editWord) {
+      // Convert backend data format to form format
+      // examCategory (single) -> examCategories (array)
+      // wordLevel (L1/L2/L3) -> level (BEGINNER/INTERMEDIATE/ADVANCED)
+      let examCats: ExamCategory[] = editWord.examCategories || [];
+      if (examCats.length === 0 && editWord.examCategory) {
+        examCats = [editWord.examCategory];
+      }
+
+      let displayLevel: DifficultyLevel = editWord.level || 'BEGINNER';
+      // If level is L1/L2/L3 format, convert it
+      if (editWord.wordLevel && DB_TO_LEVEL[editWord.wordLevel]) {
+        displayLevel = DB_TO_LEVEL[editWord.wordLevel];
+      } else if (editWord.level && DB_TO_LEVEL[editWord.level as string]) {
+        displayLevel = DB_TO_LEVEL[editWord.level as string];
+      }
+
       setForm({
         word: editWord.word,
-        examCategories: editWord.examCategories || [],
-        level: editWord.level || 'BEGINNER',
+        examCategories: examCats,
+        level: displayLevel,
         topics: editWord.topics || [],
         generateContent: false,
       });
