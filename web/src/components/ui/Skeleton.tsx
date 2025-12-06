@@ -20,9 +20,9 @@ export function Skeleton({ className = '' }: { className?: string }) {
 }
 
 // Card Skeleton
-export function SkeletonCard() {
+export function SkeletonCard({ className = '' }: { className?: string }) {
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-200">
+    <div className={`bg-white rounded-2xl p-6 border border-gray-200 ${className}`}>
       <div className="flex items-start gap-4">
         <Skeleton className="w-12 h-12 rounded-xl flex-shrink-0" />
         <div className="flex-1 space-y-3">

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { progressAPI } from '@/lib/api';
 import TabLayout from '@/components/layout/TabLayout';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
 interface ReviewStats {
   dueToday: number;
@@ -81,8 +82,21 @@ export default function ReviewPage() {
   if (!hasHydrated || loading) {
     return (
       <TabLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-xl text-gray-500">로딩 중...</div>
+        <div className="container mx-auto px-4 py-6 max-w-4xl">
+          <div className="mb-6">
+            <div className="h-8 w-24 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-5 w-56 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <SkeletonCard className="mb-6 h-40" />
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 border border-gray-200">
+                <div className="h-9 w-12 bg-gray-200 rounded animate-pulse mx-auto mb-1" />
+                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse mx-auto" />
+              </div>
+            ))}
+          </div>
+          <SkeletonCard className="mb-6 h-64" />
         </div>
       </TabLayout>
     );

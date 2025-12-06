@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmModal';
+import { EmptyFirstTime } from '@/components/ui/EmptyState';
+import { SkeletonListItem } from '@/components/ui/Skeleton';
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -95,8 +97,28 @@ export default function BookmarksPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">로딩 중...</div>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+                ← 대시보드
+              </Link>
+              <h1 className="text-2xl font-bold text-blue-600">내 북마크</h1>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8 max-w-5xl">
+          <div className="mb-8">
+            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <SkeletonListItem key={i} />
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -124,19 +146,7 @@ export default function BookmarksPage() {
         </div>
 
         {bookmarks.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center">
-            <div className="text-6xl mb-4">⭐</div>
-            <h3 className="text-2xl font-bold mb-2">북마크가 없습니다</h3>
-            <p className="text-gray-600 mb-6">
-              학습하고 싶은 단어를 북마크해보세요
-            </p>
-            <Link
-              href="/words"
-              className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-            >
-              단어 탐색하기
-            </Link>
-          </div>
+          <EmptyFirstTime type="bookmarks" />
         ) : (
           <div className="space-y-4">
             {bookmarks.map((bookmark) => (
