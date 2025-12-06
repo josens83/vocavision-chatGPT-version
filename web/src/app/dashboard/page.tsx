@@ -237,6 +237,31 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* 학습 모드 선택 */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">학습 모드</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href={`/learn?exam=${selectedExam.toLowerCase()}&level=${selectedLevel}`}
+              className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl text-center transition-colors"
+            >
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                <span className="text-xl">📖</span>
+              </div>
+              <span className="text-sm font-medium text-blue-700">플래시카드</span>
+            </Link>
+            <Link
+              href={`/quiz?exam=${selectedExam}&level=${selectedLevel}`}
+              className="p-4 bg-pink-50 hover:bg-pink-100 rounded-xl text-center transition-colors"
+            >
+              <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                <span className="text-xl">✅</span>
+              </div>
+              <span className="text-sm font-medium text-pink-700">4지선다 퀴즈</span>
+            </Link>
+          </div>
+        </div>
+
         {/* 연속 수강일 - FastCampus 스타일 캘린더 */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
