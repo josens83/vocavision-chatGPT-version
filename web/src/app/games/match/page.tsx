@@ -172,35 +172,35 @@ export default function MatchGamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 py-4 md:py-8 px-4">
       {/* Header */}
-      <div className="max-w-6xl mx-auto mb-8">
-        <div className="flex justify-between items-center mb-4">
+      <div className="max-w-6xl mx-auto mb-4 md:mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <Link
             href="/dashboard"
             className="text-white hover:text-purple-200 transition"
           >
             ← 대시보드로
           </Link>
-          <div className="flex gap-6 text-white">
-            <div className="bg-white/20 rounded-lg px-4 py-2 backdrop-blur-sm">
-              <div className="text-sm opacity-80">시간</div>
-              <div className="text-2xl font-bold">{formatTime(elapsedTime)}</div>
+          <div className="flex gap-2 md:gap-6 text-white w-full sm:w-auto justify-between sm:justify-end">
+            <div className="bg-white/20 rounded-lg px-3 md:px-4 py-2 backdrop-blur-sm flex-1 sm:flex-initial">
+              <div className="text-xs md:text-sm opacity-80">시간</div>
+              <div className="text-lg md:text-2xl font-bold">{formatTime(elapsedTime)}</div>
             </div>
-            <div className="bg-white/20 rounded-lg px-4 py-2 backdrop-blur-sm">
-              <div className="text-sm opacity-80">실수</div>
-              <div className="text-2xl font-bold">{mistakes}</div>
+            <div className="bg-white/20 rounded-lg px-3 md:px-4 py-2 backdrop-blur-sm flex-1 sm:flex-initial">
+              <div className="text-xs md:text-sm opacity-80">실수</div>
+              <div className="text-lg md:text-2xl font-bold">{mistakes}</div>
             </div>
-            <div className="bg-white/20 rounded-lg px-4 py-2 backdrop-blur-sm">
-              <div className="text-sm opacity-80">매칭</div>
-              <div className="text-2xl font-bold">{matchedPairs.length}/8</div>
+            <div className="bg-white/20 rounded-lg px-3 md:px-4 py-2 backdrop-blur-sm flex-1 sm:flex-initial">
+              <div className="text-xs md:text-sm opacity-80">매칭</div>
+              <div className="text-lg md:text-2xl font-bold">{matchedPairs.length}/8</div>
             </div>
           </div>
         </div>
 
         <div className="text-center text-white">
-          <h1 className="text-4xl font-bold mb-2">🎯 Match Game</h1>
-          <p className="text-purple-100">
+          <h1 className="text-2xl md:text-4xl font-bold mb-2">🎯 Match Game</h1>
+          <p className="text-purple-100 text-sm md:text-base">
             단어와 정의를 매칭하세요! 빠를수록 좋습니다!
           </p>
         </div>
@@ -208,7 +208,7 @@ export default function MatchGamePage() {
 
       {/* Game Grid */}
       <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
           <AnimatePresence>
             {cards.map((card) => (
               <motion.div
@@ -223,7 +223,7 @@ export default function MatchGamePage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={`
-                      w-full h-32 rounded-xl p-4 font-medium text-center
+                      w-full h-24 md:h-32 rounded-xl p-3 md:p-4 font-medium text-center
                       transition-all duration-200
                       ${
                         selectedCards.some((c) => c.id === card.id)
@@ -234,10 +234,10 @@ export default function MatchGamePage() {
                       }
                     `}
                   >
-                    <div className="text-sm opacity-60 mb-1">
+                    <div className="text-xs md:text-sm opacity-60 mb-1">
                       {card.type === 'word' ? '단어' : '정의'}
                     </div>
-                    <div className="text-lg leading-tight">
+                    <div className="text-sm md:text-lg leading-tight line-clamp-2">
                       {card.content}
                     </div>
                   </motion.button>
