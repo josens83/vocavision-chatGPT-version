@@ -99,7 +99,7 @@ export default function WordVisualsEditor({
   const handleImageDelete = (type: VisualType) => {
     const currentVisuals = VISUAL_TYPES.map(getVisual);
     const updatedVisuals = currentVisuals.map((v) =>
-      v.type === type ? { ...v, imageUrl: undefined } : v
+      v.type === type ? { ...v, imageUrl: null } : v
     );
     onChange(updatedVisuals);
 
