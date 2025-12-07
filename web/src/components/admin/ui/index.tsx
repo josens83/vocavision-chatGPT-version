@@ -495,6 +495,7 @@ interface AlertProps {
   title?: string;
   children: React.ReactNode;
   onClose?: () => void;
+  className?: string;
 }
 
 export const Alert: React.FC<AlertProps> = ({
@@ -502,6 +503,7 @@ export const Alert: React.FC<AlertProps> = ({
   title,
   children,
   onClose,
+  className,
 }) => {
   const styles = {
     success: {
@@ -537,7 +539,7 @@ export const Alert: React.FC<AlertProps> = ({
   const s = styles[type];
 
   return (
-    <div className={`${s.bg} ${s.border} border rounded-lg p-4`}>
+    <div className={`${s.bg} ${s.border} border rounded-lg p-4 ${className || ''}`}>
       <div className="flex gap-3">
         <div className={`flex-shrink-0 ${s.icon}`}>
           {type === 'success' && (
