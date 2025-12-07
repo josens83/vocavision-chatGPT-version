@@ -1141,3 +1141,166 @@ export const createAuditLog = async (
     console.error('Failed to create audit log:', error);
   }
 };
+
+// ============================================
+// Convert Pronunciation Format (한국어 발음 강세 일괄 변환)
+// ============================================
+
+// 한글 유니코드 범위
+const HANGUL_START = 0xAC00;
+const HANGUL_END = 0xD7A3;
+
+function isHangul(char: string): boolean {
+  const code = char.charCodeAt(0);
+  return code >= HANGUL_START && code <= HANGUL_END;
+}
+
+function splitKoreanSyllables(korean: string): string[] {
+  const syllables: string[] = [];
+  for (const char of korean) {
+    if (isHangul(char)) {
+      syllables.push(char);
+    }
+  }
+  return syllables;
+}
+
+function findStressPosition(ipa: string, totalSyllables: number): number {
+  if (!ipa || totalSyllables <= 1) return 0;
+
+  const primaryStressIndex = ipa.indexOf('ˈ');
+  if (primaryStressIndex === -1) return 0;
+
+  const beforeStress = ipa.substring(0, primaryStressIndex);
+  const vowelPattern = /[aeiouəɪʊɛɔæɑʌɒɜɐ]/gi;
+  const diphthongPattern = /eɪ|aɪ|ɔɪ|aʊ|oʊ|ɪə|eə|ʊə/gi;
+
+  const cleanedBefore = beforeStress.replace(diphthongPattern, 'V');
+  const vowelsBefore = (cleanedBefore.match(vowelPattern) || []).length;
+
+  return Math.min(vowelsBefore, totalSyllables - 1);
+}
+
+function convertPronunciationFormat(ipa: string, koreanPron: string): {
+  converted: string;
+  changed: boolean;
+  stressSyllable: string;
+} {
+  if (!koreanPron) {
+    return { converted: koreanPron, changed: false, stressSyllable: '' };
+  }
+
+  // 이미 변환된 경우 스킵
+  if (koreanPron.includes('강세:')) {
+    return { converted: koreanPron, changed: false, stressSyllable: '' };
+  }
+
+  // 이미 하이픈으로 분리된 경우 (강세 표시만 추가)
+  if (koreanPron.includes('-')) {
+    const syllables = koreanPron.split('-');
+    const stressIndex = findStressPosition(ipa, syllables.length);
+    const stressSyllable = syllables[stressIndex] || syllables[0];
+    const result = `${koreanPron} (강세: ${stressSyllable})`;
+    return { converted: result, changed: true, stressSyllable };
+  }
+
+  const syllables = splitKoreanSyllables(koreanPron);
+
+  if (syllables.length === 0) {
+    return { converted: koreanPron, changed: false, stressSyllable: '' };
+  }
+
+  if (syllables.length === 1) {
+    const result = `${syllables[0]} (강세: ${syllables[0]})`;
+    return { converted: result, changed: true, stressSyllable: syllables[0] };
+  }
+
+  const stressIndex = findStressPosition(ipa, syllables.length);
+  const stressSyllable = syllables[stressIndex];
+  const hyphenated = syllables.join('-');
+  const result = `${hyphenated} (강세: ${stressSyllable})`;
+
+  return { converted: result, changed: true, stressSyllable };
+}
+
+export const convertPronunciations = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { dryRun = true, limit } = req.body;
+    const maxLimit = limit ? parseInt(limit, 10) : undefined;
+
+    console.log(`[Pronunciation Convert] Mode: ${dryRun ? 'DRY RUN' : 'EXECUTE'}, Limit: ${maxLimit || 'ALL'}`);
+
+    // Get words with pronunciation
+    const words = await prisma.word.findMany({
+      ...(maxLimit ? { take: maxLimit } : {}),
+      where: {
+        pronunciation: { not: null }
+      },
+      select: {
+        id: true,
+        word: true,
+        pronunciation: true,
+        ipaUs: true,
+        ipaUk: true,
+      },
+    });
+
+    console.log(`[Pronunciation Convert] Found ${words.length} words with pronunciation`);
+
+    let updated = 0;
+    let skipped = 0;
+    const examples: Array<{ word: string; before: string; after: string }> = [];
+
+    for (const wordData of words) {
+      const ipa = wordData.ipaUs || wordData.ipaUk || '';
+      const korean = wordData.pronunciation || '';
+
+      const { converted, changed } = convertPronunciationFormat(ipa, korean);
+
+      if (!changed) {
+        skipped++;
+        continue;
+      }
+
+      // Collect examples (first 10)
+      if (examples.length < 10) {
+        examples.push({
+          word: wordData.word,
+          before: korean,
+          after: converted,
+        });
+      }
+
+      if (!dryRun) {
+        await prisma.word.update({
+          where: { id: wordData.id },
+          data: { pronunciation: converted },
+        });
+      }
+
+      updated++;
+    }
+
+    console.log(`[Pronunciation Convert] Complete: ${updated} updated, ${skipped} skipped`);
+
+    res.json({
+      success: true,
+      mode: dryRun ? 'dry_run' : 'executed',
+      stats: {
+        total: words.length,
+        updated,
+        skipped,
+      },
+      examples,
+      message: dryRun
+        ? `테스트 모드: ${updated}개 변환 예정 (DB 미변경)`
+        : `완료: ${updated}개 변환됨`,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
