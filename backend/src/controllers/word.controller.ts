@@ -59,6 +59,7 @@ export const getWords = async (
           examples: { take: 3 },
           etymology: true,
           collocations: { take: 5 },
+          visuals: { orderBy: { order: 'asc' } },  // 3-이미지 시각화
         },
         skip,
         take: limitNum,
@@ -106,7 +107,8 @@ export const getWordById = async (
         },
         etymology: true,
         synonyms: true,
-        antonyms: true
+        antonyms: true,
+        visuals: { orderBy: { order: 'asc' } },  // 3-이미지 시각화
       }
     });
 
@@ -179,7 +181,8 @@ export const getRandomWords = async (
       where,
       include: {
         images: { take: 1 },
-        mnemonics: { take: 1, orderBy: { rating: 'desc' } }
+        mnemonics: { take: 1, orderBy: { rating: 'desc' } },
+        visuals: { orderBy: { order: 'asc' } },  // 3-이미지 시각화
       },
       skip,
       take: limitNum
