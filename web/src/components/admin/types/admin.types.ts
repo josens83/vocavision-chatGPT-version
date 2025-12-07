@@ -340,7 +340,7 @@ export interface WordVisualInput {
   labelKo?: string;
   captionEn?: string;
   captionKo?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;  // null to clear image
   promptEn?: string;
   order?: number;
 }
