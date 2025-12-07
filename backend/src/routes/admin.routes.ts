@@ -25,6 +25,8 @@ import {
   removeWordsFromCollection,
   // Audit Log
   getWordAuditLogs,
+  // Pronunciation conversion
+  convertPronunciations,
 } from '../controllers/admin.controller';
 import {
   getWordVisuals,
@@ -313,5 +315,33 @@ router.delete('/collections/:collectionId/words', removeWordsFromCollection);
  *           default: 5
  */
 router.get('/words/:wordId/audit-logs', getWordAuditLogs);
+
+// ============================================
+// Pronunciation Conversion (한국어 발음 강세 변환)
+// ============================================
+
+/**
+ * @swagger
+ * /admin/convert-pronunciation:
+ *   post:
+ *     summary: Convert Korean pronunciation format (add stress markers)
+ *     tags: [Admin - Utilities]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               dryRun:
+ *                 type: boolean
+ *                 default: true
+ *                 description: If true, only shows preview without changing DB
+ *               limit:
+ *                 type: integer
+ *                 description: Maximum number of words to process
+ */
+router.post('/convert-pronunciation', convertPronunciations);
 
 export default router;
