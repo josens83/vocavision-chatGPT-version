@@ -106,10 +106,15 @@ const CONTENT_GENERATION_PROMPT = `당신은 한국인 영어 학습자를 위�
 - 시각적 장면이 떠오르는 구체적 이미지
 - imagePrompt는 DALL-E용 영어 프롬프트
 
+## 한글 발음 강세 표시 (중요!)
+- 강세가 있는 음절을 **별표**로 감싸기
+- 예: "어**밴**던" (밴에 강세), "퍼**시**브" (시에 강세)
+- IPA의 ˈ 기호 위치를 참고하여 강세 음절 결정
+
 ## JSON 출력 형식
 \`\`\`json
 {
-  "pronunciation": { "ipaUs": "/IPA/", "ipaUk": "/IPA/", "korean": "한글발음" },
+  "pronunciation": { "ipaUs": "/IPA/", "ipaUk": "/IPA/", "korean": "한글**강세**발음" },
   "definitions": [{ "partOfSpeech": "noun/verb/adj", "definitionEn": "영어정의", "definitionKo": "한국어뜻", "exampleEn": "예문", "exampleKo": "번역" }],
   "etymology": { "description": "어원설명(스토리텔링)", "language": "Latin/Greek/French", "breakdown": "분석" },
   "morphology": { "prefix": { "part": "접두사", "meaning": "의미" }, "root": { "part": "어근", "meaning": "의미" }, "suffix": { "part": "접미사", "meaning": "의미" }, "note": "설명" },
@@ -149,11 +154,16 @@ const CONTENT_GENERATION_PROMPT_DETAILED = `
 - 시각적 장면을 떠올릴 수 있는 구체적 이미지
 - 한국어 언어유희 적극 활용
 
+## 한글 발음 강세 표시 (중요!)
+- 강세가 있는 음절을 **별표**로 감싸기
+- 예: "어**밴**던" (밴에 강세), "퍼**시**브" (시에 강세)
+- IPA의 ˈ 기호 위치를 참고하여 강세 음절 결정
+
 ## 출력 형식
 반드시 JSON 형식으로 출력:
 \`\`\`json
 {
-  "pronunciation": { "ipaUs": "/발음/", "ipaUk": "/발음/", "korean": "한글" },
+  "pronunciation": { "ipaUs": "/발음/", "ipaUk": "/발음/", "korean": "한글**강세**표시" },
   "definitions": [{ "partOfSpeech": "품사", "definitionEn": "영어정의", "definitionKo": "한국어뜻", "exampleEn": "예문", "exampleKo": "번역" }],
   "etymology": { "description": "어원설명", "language": "언어", "breakdown": "분석" },
   "morphology": { "prefix": { "part": "접두사", "meaning": "의미" }, "root": { "part": "어근", "meaning": "의미" }, "suffix": { "part": "접미사", "meaning": "의미" }, "note": "설명" },
