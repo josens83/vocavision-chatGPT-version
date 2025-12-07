@@ -1513,24 +1513,24 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, c
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        연상법 (영어)
+                        연상법 설명
                       </label>
                       <textarea
                         value={editedMnemonic}
                         onChange={(e) => setEditedMnemonic(e.target.value)}
-                        placeholder="Enter mnemonic in English..."
+                        placeholder="발음과 의미를 연결하는 연상법을 입력하세요..."
                         rows={3}
                         className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        연상법 (한국어)
+                        한글 연상 공식 <span className="text-xs text-slate-400">(짧은 한 줄)</span>
                       </label>
                       <textarea
                         value={editedMnemonicKorean}
                         onChange={(e) => setEditedMnemonicKorean(e.target.value)}
-                        placeholder="한국어 연상법을 입력하세요..."
+                        placeholder="예: 아! 밴(van)에서 던지다 → 버리다"
                         rows={2}
                         className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
                       />
@@ -1541,9 +1541,9 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, c
                     {content.mnemonic ? (
                       <>
                         <p className="text-slate-700">{content.mnemonic}</p>
-                        {content.mnemonicKorean && (
-                          <p className="text-amber-700 font-medium mt-2">
-                            🇰🇷 {content.mnemonicKorean}
+                        {content.mnemonicKorean && content.mnemonicKorean !== content.mnemonic && (
+                          <p className="text-amber-700 font-medium mt-2 bg-amber-100 px-3 py-1 rounded-lg inline-block">
+                            💡 {content.mnemonicKorean}
                           </p>
                         )}
                       </>
