@@ -26,6 +26,11 @@ import {
   // Audit Log
   getWordAuditLogs,
 } from '../controllers/admin.controller';
+import {
+  getWordVisuals,
+  updateWordVisuals,
+  deleteWordVisual,
+} from '../controllers/visual.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -120,6 +125,43 @@ router.patch('/words/:wordId', updateAdminWord);
  *       - bearerAuth: []
  */
 router.put('/words/:wordId/content', updateWordContent);
+
+// ============================================
+// Word Visuals (3-Image System) Routes
+// ============================================
+
+/**
+ * @swagger
+ * /admin/words/{wordId}/visuals:
+ *   get:
+ *     summary: Get word visuals (3-image system)
+ *     tags: [Admin - Visuals]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/words/:wordId/visuals', getWordVisuals);
+
+/**
+ * @swagger
+ * /admin/words/{wordId}/visuals:
+ *   put:
+ *     summary: Update word visuals (upsert)
+ *     tags: [Admin - Visuals]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put('/words/:wordId/visuals', updateWordVisuals);
+
+/**
+ * @swagger
+ * /admin/words/{wordId}/visuals/{type}:
+ *   delete:
+ *     summary: Delete specific visual type
+ *     tags: [Admin - Visuals]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete('/words/:wordId/visuals/:type', deleteWordVisual);
 
 /**
  * @swagger
