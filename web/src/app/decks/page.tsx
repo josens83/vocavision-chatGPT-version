@@ -345,7 +345,7 @@ function DeckCard({
 }) {
   return (
     <motion.div
-      whileHover={{ y: -4, shadow: '0 10px 30px rgba(0,0,0,0.1)' }}
+      whileHover={{ y: -4, boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
       className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition"
     >
       <Link href={`/decks/${deck.id}`}>
