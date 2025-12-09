@@ -29,6 +29,11 @@ import {
   seedExamWordsHandler,
   deleteExamWordsHandler,
 } from '../controllers/admin.controller';
+import {
+  getWordVisuals,
+  updateWordVisuals,
+  deleteWordVisual,
+} from '../controllers/word.controller';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -341,5 +346,66 @@ router.post('/seed-exam-words', seedExamWordsHandler as any);
  *                 default: true
  */
 router.delete('/delete-exam-words', deleteExamWordsHandler as any);
+
+// ============================================
+// Word Visuals Routes
+// ============================================
+
+/**
+ * @swagger
+ * /admin/words/{wordId}/visuals:
+ *   get:
+ *     summary: Get word visuals (Concept/Mnemonic/Rhyme images)
+ *     tags: [Admin - Visuals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: wordId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.get('/words/:wordId/visuals', adminAuth, getWordVisuals as any);
+
+/**
+ * @swagger
+ * /admin/words/{wordId}/visuals:
+ *   put:
+ *     summary: Update word visuals
+ *     tags: [Admin - Visuals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: wordId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.put('/words/:wordId/visuals', adminAuth, updateWordVisuals as any);
+
+/**
+ * @swagger
+ * /admin/words/{wordId}/visuals/{type}:
+ *   delete:
+ *     summary: Delete specific visual type
+ *     tags: [Admin - Visuals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: wordId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [CONCEPT, MNEMONIC, RHYME]
+ */
+router.delete('/words/:wordId/visuals/:type', adminAuth, deleteWordVisual as any);
 
 export default router;
