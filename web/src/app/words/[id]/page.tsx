@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { wordsAPI, progressAPI } from '@/lib/api';
-import CommunityMnemonics from '@/components/learning/CommunityMnemonics';
 
 // Benchmarking: Enhanced word detail page with community mnemonics
 // Phase 2-3: Memrise-style community engagement
@@ -499,10 +498,6 @@ export default function WordDetailPage({ params }: { params: { id: string } }) {
                   </div>
                 )}
 
-                {/* Community Mnemonics - Phase 2-3 */}
-                <div className="mt-8">
-                  <CommunityMnemonics wordId={word.id} wordText={word.word} />
-                </div>
               </div>
             )}
 
