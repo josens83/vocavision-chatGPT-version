@@ -30,8 +30,8 @@ const VISUAL_CONFIGS = {
   },
 };
 
-// Prompt templates
-export const PROMPT_TEMPLATES = {
+// Prompt templates (not exported - Next.js API routes only allow HTTP method exports)
+const PROMPT_TEMPLATES = {
   CONCEPT: (word: string, definitionEn: string) =>
     `A 1:1 square flat illustration showing the concept of "${word}" which means "${definitionEn}". Style: flat vector illustration, bright educational colors, minimal design, no text in image. High quality, detailed.`,
 
@@ -42,8 +42,8 @@ export const PROMPT_TEMPLATES = {
     `A 1:1 square humorous illustration connecting "${word}" with rhyming words: ${rhymingWords.join(', ')}. Style: funny cartoon, playful, educational, bright colors. Visual puns welcome. No text in image.`,
 };
 
-// Caption templates
-export const CAPTION_TEMPLATES = {
+// Caption templates (not exported - Next.js API routes only allow HTTP method exports)
+const CAPTION_TEMPLATES = {
   CONCEPT: {
     ko: (definitionKo: string) => definitionKo,
     en: (definitionEn: string) => definitionEn,
