@@ -547,8 +547,8 @@ export async function GET(
   try {
     const wordId = params.id;
 
-    // Fetch word from backend
-    const wordResponse = await fetch(`${API_URL}/words/${wordId}`, {
+    // Fetch word with visuals from public endpoint (no auth required)
+    const wordResponse = await fetch(`${API_URL}/words/${wordId}/with-visuals`, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -568,24 +568,8 @@ export async function GET(
     const wordResult = await wordResponse.json();
     const word: WordData = wordResult.word;
 
-    // Fetch visuals from public endpoint
-    let visuals: WordVisual[] = [];
-    try {
-      const visualsResponse = await fetch(`${API_URL}/words/${wordId}/visuals`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
-
-      if (visualsResponse.ok) {
-        const visualsResult = await visualsResponse.json();
-        visuals = visualsResult.visuals || [];
-      }
-    } catch (e) {
-      // Visuals fetch failed, continue without them
-      console.log('Could not fetch visuals, continuing without them');
-    }
+    // Visuals are included in the with-visuals response
+    let visuals: WordVisual[] = wordResult.visuals || [];
 
     // Generate learning steps
     const steps = generateLearningSteps(word, visuals);
