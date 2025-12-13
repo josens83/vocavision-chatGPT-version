@@ -31,6 +31,7 @@ import {
   LEVEL_LABELS,
   LEVEL_SHORT_LABELS,
   LEVEL_TO_DB,
+  DB_TO_LEVEL,
   EXAM_LEVEL_OPTIONS,
   STATUS_LABELS,
   STATUS_COLORS,
@@ -42,8 +43,13 @@ import {
   useReview,
   useWordDetail,
   useAuditLogs,
+  useVisuals,
+  useContentUpdate,
   AuditLog,
+  ContentUpdateData,
 } from './hooks/useAdminApi';
+import WordVisualsEditor from './WordVisualsEditor';
+import { WordVisualInput } from './types/admin.types';
 
 // ---------------------------------------------
 // Word Form Modal
@@ -76,11 +82,27 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
   // Reset form when modal opens/closes or editWord changes
   useEffect(() => {
     if (editWord) {
+      // Convert backend data format to form format
+      // examCategory (single) -> examCategories (array)
+      // wordLevel (L1/L2/L3) -> level (BEGINNER/INTERMEDIATE/ADVANCED)
+      let examCats: ExamCategory[] = editWord.examCategories || [];
+      if (examCats.length === 0 && editWord.examCategory) {
+        examCats = [editWord.examCategory];
+      }
+
+      let displayLevel: DifficultyLevel = editWord.level || 'BEGINNER';
+      // If level is L1/L2/L3 format, convert it
+      if (editWord.wordLevel && DB_TO_LEVEL[editWord.wordLevel]) {
+        displayLevel = DB_TO_LEVEL[editWord.wordLevel];
+      } else if (editWord.level && DB_TO_LEVEL[editWord.level as string]) {
+        displayLevel = DB_TO_LEVEL[editWord.level as string];
+      }
+
       setForm({
         word: editWord.word,
-        examCategories: editWord.examCategories,
-        level: editWord.level,
-        topics: editWord.topics,
+        examCategories: examCats,
+        level: displayLevel,
+        topics: editWord.topics || [],
         generateContent: false,
       });
     } else {
@@ -212,12 +234,16 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
 
         {/* Topics */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
             토픽 태그
+            <span className="text-xs text-slate-400 ml-2 font-normal">(선택사항)</span>
           </label>
+          <p className="text-xs text-slate-500 mb-2">
+            단어의 주제/분야를 분류합니다. 예: 비즈니스, 과학, 일상, 의학, 법률 등
+          </p>
           <div className="flex gap-2 mb-2">
             <Input
-              placeholder="토픽 입력 (예: business, daily)"
+              placeholder="토픽 입력 후 Enter 또는 추가 클릭"
               value={topicInput}
               onChange={(e) => setTopicInput(e.target.value)}
               onKeyDown={(e) => {
@@ -244,6 +270,26 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
                     ×
                   </button>
                 </Badge>
+              ))}
+            </div>
+          )}
+          {form.topics.length === 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              <span className="text-xs text-slate-400">추천: </span>
+              {['비즈니스', '과학', '일상', '학술'].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      topics: [...prev.topics, suggestion],
+                    }));
+                  }}
+                  className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200"
+                >
+                  +{suggestion}
+                </button>
               ))}
             </div>
           )}
@@ -1004,6 +1050,7 @@ interface WordDetailViewProps {
   onEdit: () => void;
   onGenerate: () => void;
   onReview: () => void;
+  onContentUpdated?: () => void; // Callback to refresh word data after save
 }
 
 // Action labels for audit log
@@ -1024,6 +1071,7 @@ export const WordDetailView: React.FC<WordDetailViewProps> = ({
   onEdit,
   onGenerate,
   onReview,
+  onContentUpdated,
 }) => {
   const content = word.content;
   const [showJsonImport, setShowJsonImport] = useState(false);
@@ -1032,12 +1080,171 @@ export const WordDetailView: React.FC<WordDetailViewProps> = ({
   // Audit Logs
   const { logs: auditLogs, loading: auditLoading, fetchAuditLogs } = useAuditLogs();
 
+  // Visuals (3-Image System)
+  const {
+    visuals,
+    loading: visualsLoading,
+    saving: visualsSaving,
+    error: visualsError,
+    fetchVisuals,
+    saveVisuals,
+  } = useVisuals();
+  const [localVisuals, setLocalVisuals] = useState<WordVisualInput[]>([]);
+  const [visualsChanged, setVisualsChanged] = useState(false);
+  const [visualsSaveSuccess, setVisualsSaveSuccess] = useState(false);
+
+  // Content Editing (연상법/예문 직접 편집 - 분리)
+  const { updateContent, saving: contentSaving, error: contentError } = useContentUpdate();
+  const [editingMnemonic, setEditingMnemonic] = useState(false);
+  const [editingExamples, setEditingExamples] = useState(false);
+  const [editedMnemonic, setEditedMnemonic] = useState('');
+  const [editedMnemonicKorean, setEditedMnemonicKorean] = useState('');
+  const [editedExamples, setEditedExamples] = useState<Array<{ sentenceEn: string; sentenceKo: string }>>([]);
+  const [contentSaveSuccess, setContentSaveSuccess] = useState(false);
+
   // Fetch audit logs when word changes
   useEffect(() => {
     if (word?.id) {
       fetchAuditLogs(word.id, 5);
     }
   }, [word?.id, fetchAuditLogs]);
+
+  // Fetch visuals when word changes
+  useEffect(() => {
+    if (word?.id) {
+      fetchVisuals(word.id);
+      setVisualsChanged(false);
+      setVisualsSaveSuccess(false);
+    }
+  }, [word?.id, fetchVisuals]);
+
+  // Sync local visuals with fetched visuals
+  useEffect(() => {
+    setLocalVisuals(
+      visuals.map((v) => ({
+        type: v.type,
+        labelEn: v.labelEn,
+        labelKo: v.labelKo,
+        captionEn: v.captionEn,
+        captionKo: v.captionKo,
+        imageUrl: v.imageUrl || undefined,
+        promptEn: v.promptEn,
+        order: v.order,
+      }))
+    );
+  }, [visuals]);
+
+  // Handle visuals change
+  const handleVisualsChange = (newVisuals: WordVisualInput[]) => {
+    setLocalVisuals(newVisuals);
+    setVisualsChanged(true);
+    setVisualsSaveSuccess(false);
+  };
+
+  // Save visuals
+  const handleSaveVisuals = async () => {
+    const success = await saveVisuals(word.id, localVisuals);
+    if (success) {
+      setVisualsChanged(false);
+      setVisualsSaveSuccess(true);
+      setTimeout(() => setVisualsSaveSuccess(false), 3000);
+    }
+  };
+
+  // Handle image delete with immediate save
+  const handleImageDelete = async (_type: string, updatedVisuals: WordVisualInput[]) => {
+    setLocalVisuals(updatedVisuals);
+    const success = await saveVisuals(word.id, updatedVisuals);
+    if (success) {
+      setVisualsChanged(false);
+      setVisualsSaveSuccess(true);
+      setTimeout(() => setVisualsSaveSuccess(false), 3000);
+    }
+  };
+
+  // Start editing mnemonic (연상법만)
+  const handleStartEditMnemonic = () => {
+    setEditedMnemonic(content?.mnemonic || '');
+    setEditedMnemonicKorean(content?.mnemonicKorean || '');
+    setEditingMnemonic(true);
+    setContentSaveSuccess(false);
+  };
+
+  // Start editing examples (예문만)
+  const handleStartEditExamples = () => {
+    setEditedExamples(
+      content?.funnyExamples?.map((ex) => ({
+        sentenceEn: ex.sentenceEn || '',
+        sentenceKo: ex.sentenceKo || '',
+      })) || [{ sentenceEn: '', sentenceKo: '' }]
+    );
+    setEditingExamples(true);
+    setContentSaveSuccess(false);
+  };
+
+  // Cancel editing mnemonic
+  const handleCancelEditMnemonic = () => {
+    setEditingMnemonic(false);
+  };
+
+  // Cancel editing examples
+  const handleCancelEditExamples = () => {
+    setEditingExamples(false);
+  };
+
+  // Save mnemonic only
+  const handleSaveMnemonic = async () => {
+    const data: ContentUpdateData = {
+      mnemonic: editedMnemonic || undefined,
+      mnemonicKorean: editedMnemonicKorean || undefined,
+    };
+
+    const success = await updateContent(word.id, data);
+    if (success) {
+      setEditingMnemonic(false);
+      setContentSaveSuccess(true);
+      setTimeout(() => setContentSaveSuccess(false), 3000);
+      // Trigger parent to refresh word data for auto-update
+      onContentUpdated?.();
+    }
+  };
+
+  // Save examples only
+  const handleSaveExamples = async () => {
+    const data: ContentUpdateData = {
+      funnyExamples: editedExamples.filter((ex) => ex.sentenceEn.trim()).map((ex) => ({
+        sentenceEn: ex.sentenceEn,
+        sentenceKo: ex.sentenceKo || undefined,
+        isFunny: false,
+      })),
+    };
+
+    const success = await updateContent(word.id, data);
+    if (success) {
+      setEditingExamples(false);
+      setContentSaveSuccess(true);
+      setTimeout(() => setContentSaveSuccess(false), 3000);
+      // Trigger parent to refresh word data for auto-update
+      onContentUpdated?.();
+    }
+  };
+
+  // Add new example
+  const handleAddExample = () => {
+    setEditedExamples([...editedExamples, { sentenceEn: '', sentenceKo: '' }]);
+  };
+
+  // Remove example
+  const handleRemoveExample = (index: number) => {
+    setEditedExamples(editedExamples.filter((_, i) => i !== index));
+  };
+
+  // Update example
+  const handleUpdateExample = (index: number, field: 'sentenceEn' | 'sentenceKo', value: string) => {
+    const updated = [...editedExamples];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditedExamples(updated);
+  };
 
   // Export word data as JSON for Claude Max editing with guide template
   const handleExportJson = async () => {
@@ -1076,13 +1283,15 @@ export const WordDetailView: React.FC<WordDetailViewProps> = ({
     } : null;
 
     // Claude Max editing guide template
+    const examCategories = word.examCategories || [];
+    const topics = word.topics || [];
     const guideTemplate = `# VocaVision 콘텐츠 편집 요청
 
 ## 단어 정보
 - **단어**: ${word.word}
-- **난이도**: ${word.level}
-- **시험 카테고리**: ${word.examCategories.join(', ')}
-${word.topics.length > 0 ? `- **토픽**: ${word.topics.join(', ')}` : ''}
+- **난이도**: ${word.level || 'BEGINNER'}
+- **시험 카테고리**: ${examCategories.join(', ') || 'N/A'}
+${topics.length > 0 ? `- **토픽**: ${topics.join(', ')}` : ''}
 
 ## 편집 목적
 AI가 생성한 콘텐츠를 고품질로 개선해주세요.
@@ -1098,7 +1307,7 @@ AI가 생성한 콘텐츠를 고품질로 개선해주세요.
 
 ## 현재 데이터
 \`\`\`json
-${JSON.stringify({ word: word.word, level: word.level, examCategories: word.examCategories, topics: word.topics, content: contentData }, null, 2)}
+${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, content: contentData }, null, 2)}
 \`\`\`
 
 ## 응답 형식
@@ -1233,6 +1442,9 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories: word.exam
                         <span className="text-slate-400">한글:</span> {content.pronunciation}
                       </p>
                     )}
+                    <p className="text-xs text-slate-400 mt-2">
+                      💡 강세 표시: <code className="bg-slate-100 px-1 rounded">어**밴**던</code> → 밴 강조
+                    </p>
                   </div>
                 </Card>
               )}
@@ -1305,29 +1517,90 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories: word.exam
                 </Card>
               )}
 
-              {/* Mnemonic */}
-              {content.mnemonic && (
-                <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-                  <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              {/* Mnemonic - Editable (분리) */}
+              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                     💡 연상 기억법
                   </h3>
-                  <p className="text-slate-700">{content.mnemonic}</p>
-                  {content.mnemonicKorean && (
-                    <p className="text-amber-700 font-medium mt-2">
-                      🇰🇷 {content.mnemonicKorean}
-                    </p>
+                  {!editingMnemonic && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleStartEditMnemonic}
+                      className="text-amber-600 hover:bg-amber-100"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      편집
+                    </Button>
                   )}
-                  {content.mnemonicImage && (
-                    <div className="mt-4">
-                      <img
-                        src={content.mnemonicImage}
-                        alt="Mnemonic"
-                        className="rounded-lg max-h-48 object-contain"
+                </div>
+
+                {editingMnemonic ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        연상법 설명
+                      </label>
+                      <textarea
+                        value={editedMnemonic}
+                        onChange={(e) => setEditedMnemonic(e.target.value)}
+                        placeholder="발음과 의미를 연결하는 연상법을 입력하세요..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
                       />
                     </div>
-                  )}
-                </Card>
-              )}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        한글 연상 공식 <span className="text-xs text-slate-400">(짧은 한 줄)</span>
+                      </label>
+                      <textarea
+                        value={editedMnemonicKorean}
+                        onChange={(e) => setEditedMnemonicKorean(e.target.value)}
+                        placeholder="예: 아! 밴(van)에서 던지다 → 버리다"
+                        rows={2}
+                        className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                      />
+                    </div>
+                    {/* 연상법 저장/취소 버튼 */}
+                    <div className="flex gap-2 justify-end pt-2 border-t border-amber-200">
+                      <Button variant="ghost" size="sm" onClick={handleCancelEditMnemonic} disabled={contentSaving}>
+                        취소
+                      </Button>
+                      <Button variant="primary" size="sm" onClick={handleSaveMnemonic} loading={contentSaving} className="bg-amber-500 hover:bg-amber-600">
+                        저장
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {content.mnemonic ? (
+                      <>
+                        <p className="text-slate-700">{content.mnemonic}</p>
+                        {content.mnemonicKorean && content.mnemonicKorean !== content.mnemonic && (
+                          <p className="text-amber-700 font-medium mt-2 bg-amber-100 px-3 py-1 rounded-lg inline-block">
+                            💡 {content.mnemonicKorean}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-slate-400 italic">연상법이 없습니다. 편집 버튼을 눌러 추가하세요.</p>
+                    )}
+                  </>
+                )}
+
+                {content.mnemonicImage && !editingMnemonic && (
+                  <div className="mt-4">
+                    <img
+                      src={content.mnemonicImage}
+                      alt="Mnemonic"
+                      className="rounded-lg max-h-48 object-contain"
+                    />
+                  </div>
+                )}
+              </Card>
 
               {/* Collocations */}
               {content.collocations?.length > 0 && (
@@ -1368,22 +1641,96 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories: word.exam
                 </Card>
               )}
 
-              {/* Examples */}
-              {content.funnyExamples?.length > 0 && (
-                <Card>
-                  <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              {/* Examples - Editable (분리) */}
+              <Card>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                     ✍️ 예문
                   </h3>
-                  <div className="space-y-3">
-                    {content.funnyExamples.map((ex, i) => (
-                      <div key={ex.id || i} className="p-3 bg-slate-50 rounded-lg">
-                        {ex.isFunny && <Badge color="yellow" size="sm">재미있는 예문</Badge>}
-                        <p className="text-slate-800 mt-1">{ex.sentenceEn}</p>
-                        <p className="text-slate-500 text-sm">{ex.sentenceKo}</p>
+                  {!editingExamples && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleStartEditExamples}
+                      className="text-pink-600 hover:bg-pink-100"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      편집
+                    </Button>
+                  )}
+                </div>
+
+                {editingExamples ? (
+                  <div className="space-y-4">
+                    {editedExamples.map((ex, i) => (
+                      <div key={i} className="p-3 bg-slate-50 rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-500">예문 {i + 1}</span>
+                          {editedExamples.length > 1 && (
+                            <button
+                              onClick={() => handleRemoveExample(i)}
+                              className="text-red-500 hover:text-red-700 text-xs"
+                            >
+                              삭제
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          value={ex.sentenceEn}
+                          onChange={(e) => handleUpdateExample(i, 'sentenceEn', e.target.value)}
+                          placeholder="English sentence..."
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={ex.sentenceKo}
+                          onChange={(e) => handleUpdateExample(i, 'sentenceKo', e.target.value)}
+                          placeholder="한국어 번역..."
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm"
+                        />
                       </div>
                     ))}
+                    <button
+                      onClick={handleAddExample}
+                      className="w-full py-2 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-pink-400 hover:text-pink-500 transition text-sm"
+                    >
+                      + 예문 추가
+                    </button>
+                    {/* 예문 저장/취소 버튼 */}
+                    <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
+                      <Button variant="ghost" size="sm" onClick={handleCancelEditExamples} disabled={contentSaving}>
+                        취소
+                      </Button>
+                      <Button variant="primary" size="sm" onClick={handleSaveExamples} loading={contentSaving} className="bg-pink-500 hover:bg-pink-600">
+                        저장
+                      </Button>
+                    </div>
                   </div>
-                </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {content.funnyExamples?.length > 0 ? (
+                      content.funnyExamples.map((ex, i) => (
+                        <div key={ex.id || i} className="p-3 bg-slate-50 rounded-lg">
+                          {ex.isFunny && <Badge color="yellow" size="sm">재미있는 예문</Badge>}
+                          <p className="text-slate-800 mt-1">{ex.sentenceEn}</p>
+                          <p className="text-slate-500 text-sm">{ex.sentenceKo}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-slate-400 italic">예문이 없습니다. 편집 버튼을 눌러 추가하세요.</p>
+                    )}
+                  </div>
+                )}
+              </Card>
+
+              {/* Content Save Success Message */}
+              {contentSaveSuccess && !editingMnemonic && !editingExamples && (
+                <Alert type="success">
+                  저장되었습니다!
+                </Alert>
               )}
 
               {/* Related Words */}
@@ -1414,6 +1761,66 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories: word.exam
                   )}
                 </Card>
               )}
+
+              {/* Visual Images (3-Image System) */}
+              <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    시각화 이미지
+                    <span className="text-xs text-slate-400 font-normal">(3-이미지 시스템)</span>
+                  </h3>
+                  {visualsChanged && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveVisuals}
+                      loading={visualsSaving}
+                      className="bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      저장
+                    </Button>
+                  )}
+                  {visualsSaveSuccess && (
+                    <Badge color="green">저장 완료!</Badge>
+                  )}
+                </div>
+
+                {visualsError && (
+                  <div className="mb-4">
+                    <Alert type="error">
+                      {visualsError}
+                    </Alert>
+                  </div>
+                )}
+
+                {visualsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner size="md" />
+                  </div>
+                ) : (
+                  <WordVisualsEditor
+                    wordId={word.id}
+                    word={word.word}
+                    visuals={localVisuals}
+                    onChange={handleVisualsChange}
+                    onImageDelete={handleImageDelete}
+                    cloudinaryCloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+                    wordData={{
+                      definitionEn: content?.definitions?.[0]?.definitionEn,
+                      definitionKo: content?.definitions?.[0]?.definitionKo,
+                      mnemonic: content?.mnemonic,
+                      mnemonicKorean: content?.mnemonicKorean,
+                      rhymingWords: content?.rhymingWords,
+                    }}
+                  />
+                )}
+              </Card>
 
               {/* Claude Max Editing Section */}
               <Card className="bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200">
@@ -1536,21 +1943,76 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories: word.exam
               </Card>
             </>
           ) : (
-            <div className="text-center py-12">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-                <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+            <div className="space-y-6">
+              <div className="text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">
+                  아직 콘텐츠가 없습니다
+                </h3>
+                <p className="text-slate-500 mb-4">
+                  AI를 사용하여 콘텐츠를 자동으로 생성해보세요.
+                </p>
+                <Button variant="primary" onClick={onGenerate}>
+                  AI 콘텐츠 생성
+                </Button>
               </div>
-              <h3 className="text-lg font-medium text-slate-900 mb-2">
-                아직 콘텐츠가 없습니다
-              </h3>
-              <p className="text-slate-500 mb-4">
-                AI를 사용하여 콘텐츠를 자동으로 생성해보세요.
-              </p>
-              <Button variant="primary" onClick={onGenerate}>
-                AI 콘텐츠 생성
-              </Button>
+
+              {/* Visual Images - Available even without content */}
+              <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    시각화 이미지
+                    <span className="text-xs text-slate-400 font-normal">(3-이미지 시스템)</span>
+                  </h3>
+                  {visualsChanged && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveVisuals}
+                      loading={visualsSaving}
+                      className="bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      저장
+                    </Button>
+                  )}
+                  {visualsSaveSuccess && (
+                    <Badge color="green">저장 완료!</Badge>
+                  )}
+                </div>
+
+                {visualsError && (
+                  <div className="mb-4">
+                    <Alert type="error">
+                      {visualsError}
+                    </Alert>
+                  </div>
+                )}
+
+                {visualsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Spinner size="md" />
+                  </div>
+                ) : (
+                  <WordVisualsEditor
+                    wordId={word.id}
+                    word={word.word}
+                    visuals={localVisuals}
+                    onChange={handleVisualsChange}
+                    onImageDelete={handleImageDelete}
+                    cloudinaryCloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+                  />
+                )}
+              </Card>
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@
 // Reduces initial bundle size by lazy-loading components
 
 import dynamic from 'next/dynamic';
-import { ComponentType } from 'react';
+import { ComponentType, ReactElement } from 'react';
 import { SkeletonLoader, ListSkeleton, CardSkeleton } from '@/components/fallbacks/GracefulData';
 
 /**
@@ -11,7 +11,7 @@ import { SkeletonLoader, ListSkeleton, CardSkeleton } from '@/components/fallbac
 export function dynamicImport<P extends object = object>(
   importFunc: () => Promise<{ default: ComponentType<P> }>,
   options?: {
-    loading?: () => JSX.Element | null;
+    loading?: () => ReactElement | null;
     ssr?: boolean;
   }
 ) {
@@ -26,7 +26,7 @@ export function dynamicImport<P extends object = object>(
  */
 export function dynamicImportClient<P extends object = object>(
   importFunc: () => Promise<{ default: ComponentType<P> }>,
-  loading?: () => JSX.Element | null
+  loading?: () => ReactElement | null
 ) {
   return dynamic(importFunc, {
     loading: loading ?? (() => <SkeletonLoader className="h-40 w-full" />),

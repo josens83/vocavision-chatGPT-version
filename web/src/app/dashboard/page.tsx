@@ -4,485 +4,455 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore, useExamCourseStore, ExamType } from '@/lib/store';
-import { progressAPI, authAPI, wordsAPI } from '@/lib/api';
-import DailyGoalWidgetEnhanced from '@/components/dashboard/DailyGoalWidgetEnhanced';
-import StreakWidget from '@/components/dashboard/StreakWidget';
-import axios from 'axios';
+import { progressAPI, wordsAPI } from '@/lib/api';
+import TabLayout from '@/components/layout/TabLayout';
+import { SkeletonDashboard } from '@/components/ui/Skeleton';
+import { StatsOverview } from '@/components/dashboard';
 
-// 시험별 코스 기본 데이터
-const examCoursesBase = [
-  {
-    id: 'CSAT' as ExamType,
-    name: '수능',
-    fullName: '대학수학능력시험',
-    description: '수능 1~2등급 목표',
-    icon: '📝',
-    gradient: 'from-blue-500 to-blue-600',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-300',
-  },
-  {
-    id: 'SAT' as ExamType,
-    name: 'SAT',
-    fullName: '미국대학입학시험',
-    description: 'SAT 1500+ 목표',
-    icon: '🇺🇸',
-    gradient: 'from-red-500 to-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-300',
-  },
-  {
-    id: 'TOEFL' as ExamType,
-    name: 'TOEFL',
-    fullName: '학술영어능력시험',
-    description: 'TOEFL 100+ 목표',
-    icon: '🌍',
-    gradient: 'from-orange-500 to-orange-600',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-300',
-  },
-  {
-    id: 'TOEIC' as ExamType,
-    name: 'TOEIC',
-    fullName: '국제의사소통영어',
-    description: 'TOEIC 900+ 목표',
-    icon: '💼',
-    gradient: 'from-green-500 to-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-300',
-  },
-  {
-    id: 'TEPS' as ExamType,
-    name: 'TEPS',
-    fullName: '서울대영어능력시험',
-    description: 'TEPS 500+ 목표',
-    icon: '🎓',
-    gradient: 'from-purple-500 to-purple-600',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-300',
-  },
-];
+// Exam info
+const examInfo: Record<string, { name: string; icon: string; gradient: string; color: string }> = {
+  CSAT: { name: '수능', icon: '📝', gradient: 'from-blue-500 to-blue-600', color: 'blue' },
+  TOEIC: { name: 'TOEIC', icon: '💼', gradient: 'from-green-500 to-green-600', color: 'green' },
+  TOEFL: { name: 'TOEFL', icon: '🌍', gradient: 'from-orange-500 to-orange-600', color: 'orange' },
+  TEPS: { name: 'TEPS', icon: '🎓', gradient: 'from-purple-500 to-purple-600', color: 'purple' },
+};
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// Level info with improved descriptions
+const levelInfo: Record<string, {
+  name: string;
+  description: string;
+  target: string;
+  wordCount: number;
+  details: string;
+}> = {
+  L1: {
+    name: '초급',
+    description: '기초 필수 단어 1,000개',
+    target: '수능 3등급 목표',
+    wordCount: 1000,
+    details: '가장 자주 출제되는 핵심 어휘',
+  },
+  L2: {
+    name: '중급',
+    description: '핵심 심화 단어 1,000개',
+    target: '수능 2등급 목표',
+    wordCount: 1000,
+    details: '2등급 도약을 위한 필수 어휘',
+  },
+  L3: {
+    name: '고급',
+    description: '고난도 단어 1,000개',
+    target: '수능 1등급 목표',
+    wordCount: 1000,
+    details: '1등급 완성을 위한 고급 어휘',
+  },
+};
 
 interface UserStats {
   totalWordsLearned: number;
   currentStreak: number;
   longestStreak: number;
-  lastActiveDate: string | null;
-}
-
-interface DueReview {
-  count: number;
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
+  const activeExam = useExamCourseStore((state) => state.activeExam);
+  const setActiveExam = useExamCourseStore((state) => state.setActiveExam);
 
   const [stats, setStats] = useState<UserStats | null>(null);
-  const [dueReviews, setDueReviews] = useState<DueReview>({ count: 0 });
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [wordCounts, setWordCounts] = useState<Record<string, number>>({});
+  const [dueReviewCount, setDueReviewCount] = useState(0);
+  const [selectedLevel, setSelectedLevel] = useState('L1');
   const [loading, setLoading] = useState(true);
+  const [showLevelTestBanner, setShowLevelTestBanner] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Get current month calendar data
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
 
   useEffect(() => {
-    // Wait for Zustand to hydrate from localStorage before checking auth
-    if (!hasHydrated) {
-      return;
-    }
-
+    if (!hasHydrated) return;
     if (!user) {
       router.push('/auth/login');
       return;
     }
-
-    loadDashboardData();
-    loadNotificationCount();
-    loadWordCounts();
+    loadData();
   }, [user, hasHydrated, router]);
 
-  const loadDashboardData = async () => {
+  const loadData = async () => {
     try {
-      const [profileData, progressData, reviewsData] = await Promise.all([
-        authAPI.getProfile(),
+      const [progressData, reviewsData] = await Promise.all([
         progressAPI.getUserProgress(),
         progressAPI.getDueReviews(),
       ]);
-
       setStats(progressData.stats);
-      setDueReviews({ count: reviewsData.count });
+      setDueReviewCount(reviewsData.count || 0);
+
+      // Load saved preferences
+      const savedLevel = localStorage.getItem('selectedLevel');
+      if (savedLevel) setSelectedLevel(savedLevel);
+
+      // Check if level test was completed
+      const levelTestCompleted = localStorage.getItem('levelTestCompleted');
+      setShowLevelTestBanner(levelTestCompleted !== 'true');
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadNotificationCount = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await axios.get(`${API_URL}/notifications?limit=1`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUnreadNotifications(response.data.unreadCount);
-    } catch (error) {
-      console.error('Failed to load notification count:', error);
+  const handleLevelChange = (level: string) => {
+    setSelectedLevel(level);
+    localStorage.setItem('selectedLevel', level);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/words?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
-  const loadWordCounts = async () => {
-    try {
-      const data = await wordsAPI.getWordCounts();
-      setWordCounts(data.counts);
-    } catch (error) {
-      console.error('Failed to load word counts:', error);
-      // Fallback: CSAT has data even if API fails
-      setWordCounts({ CSAT: 429 });
-    }
-  };
+  const selectedExam = activeExam || 'CSAT';
+  const exam = examInfo[selectedExam];
+  const level = levelInfo[selectedLevel];
 
-  // Compute exam courses with dynamic word counts
-  const examCourses = examCoursesBase.map((course) => {
-    const examId = course.id as string;
-    const count = examId ? wordCounts[examId] || 0 : 0;
-    const isActive = count > 0;
-    return {
-      ...course,
-      wordCount: count > 0 ? count.toLocaleString() : '준비 중',
-      isActive,
-    };
-  });
+  // Calculate progress based on selected level
+  const totalWords = level.wordCount;
+  const learnedWords = stats?.totalWordsLearned || 0;
+  const progressPercent = Math.min(Math.round((learnedWords / totalWords) * 100), 100);
 
   if (!hasHydrated || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">로딩 중...</div>
-      </div>
+      <TabLayout>
+        <SkeletonDashboard />
+      </TabLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/dashboard" className="text-2xl font-bold text-blue-600">
-            VocaVision
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link href="/chat" className="text-cyan-600 hover:text-cyan-700 transition font-medium">
-              AI 도우미
-            </Link>
-            <Link href="/words" className="text-gray-600 hover:text-blue-600 transition">
-              단어
-            </Link>
-            <Link href="/bookmarks" className="text-gray-600 hover:text-blue-600 transition">
-              북마크
-            </Link>
-            <Link href="/statistics" className="text-gray-600 hover:text-blue-600 transition">
-              통계
-            </Link>
-            <Link href="/notifications" className="relative text-gray-600 hover:text-blue-600 transition">
-              <span className="text-xl">🔔</span>
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">
-                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                </span>
-              )}
-            </Link>
-            <Link href="/settings" className="text-gray-600 hover:text-blue-600 transition">
-              설정
-            </Link>
+    <TabLayout
+      headerRight={
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedExam}
+            onChange={(e) => setActiveExam(e.target.value as ExamType)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white font-medium"
+          >
+            {Object.entries(examInfo).map(([key, info]) => (
+              <option key={key} value={key}>{info.name}</option>
+            ))}
+          </select>
+        </div>
+      }
+    >
+      <div className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Hero Section - Skillflo 스타일 */}
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+            오늘도 영어 실력을 키워볼까요?
+          </h1>
+          <p className="text-gray-500">
+            매일 조금씩, 꾸준히 학습하면 실력이 쑥쑥 늘어요.
+          </p>
+        </div>
+
+        {/* 단어 검색 */}
+        <form onSubmit={handleSearch} className="mb-6">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="단어 검색..."
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 pl-10 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition"
+              />
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <button
+              type="submit"
+              className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-xl font-medium transition"
+            >
+              검색
+            </button>
           </div>
-        </div>
-      </header>
+        </form>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            안녕하세요, {user?.name || '학습자'}님! 👋
-          </h2>
-          <p className="text-gray-600">오늘도 영어 실력을 키워볼까요?</p>
-        </div>
+        {/* 레벨 테스트 배너 - 첫 방문 사용자에게 표시 */}
+        {showLevelTestBanner && (
+          <div className="bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl p-6 mb-6 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 opacity-10">
+              <svg width="200" height="200" viewBox="0 0 200 200" fill="currentColor">
+                <circle cx="150" cy="50" r="100" />
+              </svg>
+            </div>
+            <div className="relative">
+              <h3 className="text-lg font-bold mb-2">
+                나의 영단어 수준은? 🎯
+              </h3>
+              <p className="text-pink-100 text-sm mb-4">
+                맞춤 학습을 위해 간단한 테스트를 진행해보세요 (약 2분)
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/level-test"
+                  className="inline-flex items-center gap-2 bg-white text-pink-600 font-semibold px-4 py-2 rounded-lg hover:bg-pink-50 transition-colors"
+                >
+                  테스트 시작
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+                <button
+                  onClick={() => {
+                    localStorage.setItem('levelTestCompleted', 'true');
+                    setShowLevelTestBanner(false);
+                  }}
+                  className="text-pink-200 hover:text-white text-sm underline transition-colors"
+                >
+                  건너뛰기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* 시험별 코스 섹션 - 핵심 진입점 */}
-        <div className="mb-8">
+        {/* 이어서 학습 섹션 - FastCampus 스타일 */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold text-gray-900">시험별 코스</h3>
-            <Link href="/exam" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-              전체 보기 →
+            <h2 className="text-lg font-bold text-gray-900">바로 학습을 이어갈까요?</h2>
+            <span className="text-sm text-pink-500 font-medium">
+              {stats?.currentStreak || 0}일 연속 학습 중
+            </span>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${exam.gradient} flex items-center justify-center text-2xl`}>
+                  {exam.icon}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">{exam.name} {level.name} 코스</p>
+                  <p className="text-sm text-gray-500">{level.description} • {level.target}</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mb-3">{level.details}</p>
+
+              {/* Progress Bar */}
+              <div className="mb-2">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-500">학습 진도</span>
+                  <span className="font-medium text-blue-600">{learnedWords} / {totalWords} 단어</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href={`/learn?exam=${selectedExam.toLowerCase()}&level=${selectedLevel}`}
+              className="w-full md:w-auto bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded-xl font-bold text-center transition shadow-lg shadow-pink-500/25"
+            >
+              이어서 학습
             </Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {examCourses.map((course) => (
-              <Link
-                key={course.id}
-                href={course.isActive ? `/courses/${course.id?.toLowerCase()}` : '#'}
-                onClick={(e) => !course.isActive && e.preventDefault()}
-                className={`${course.bgColor} ${course.borderColor} border-2 rounded-xl p-4 transition-all duration-300 group relative ${
-                  course.isActive
-                    ? 'hover:shadow-lg cursor-pointer'
-                    : 'opacity-70 cursor-not-allowed'
+        </div>
+
+        {/* 레벨 선택 */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">학습 레벨</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {Object.entries(levelInfo).map(([key, info]) => (
+              <button
+                key={key}
+                onClick={() => handleLevelChange(key)}
+                className={`p-4 rounded-xl border-2 transition text-left ${
+                  selectedLevel === key
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300 bg-white'
                 }`}
               >
-                {/* 준비 중 뱃지 */}
-                {!course.isActive && (
-                  <div className="absolute top-2 right-2 bg-gray-500 text-white text-[10px] px-2 py-0.5 rounded-full">
-                    준비 중
-                  </div>
-                )}
-                {/* 활성 뱃지 */}
-                {course.isActive && (
-                  <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full">
-                    학습 가능
-                  </div>
-                )}
-                <div className="text-3xl mb-2">{course.icon}</div>
-                <h4 className={`font-bold transition ${
-                  course.isActive
-                    ? 'text-gray-900 group-hover:text-blue-600'
-                    : 'text-gray-500'
-                }`}>
-                  {course.name}
-                </h4>
-                <p className="text-xs text-gray-500 mb-1">{course.fullName}</p>
-                <p className={`text-sm ${course.isActive ? 'text-gray-600' : 'text-gray-400'}`}>
-                  {course.isActive ? course.description : '곧 업데이트 예정'}
-                </p>
-                <div className={`mt-2 text-xs font-medium ${
-                  course.isActive ? 'text-gray-700' : 'text-gray-400'
-                }`}>
-                  {course.isActive ? `${course.wordCount}개 단어` : '콘텐츠 준비 중'}
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`font-bold ${selectedLevel === key ? 'text-blue-600' : 'text-gray-900'}`}>
+                    {info.name}
+                  </p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    selectedLevel === key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {info.wordCount.toLocaleString()}개
+                  </span>
                 </div>
-              </Link>
+                <p className="text-sm text-gray-600 mb-1">{info.description}</p>
+                <p className="text-xs text-gray-400">{info.details}</p>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Stats Grid - Benchmarking: Duolingo 스타일 스트릭 시스템 */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* 학습한 단어 통계 */}
-          <StatCard
-            icon="📚"
-            title="학습한 단어"
-            value={stats?.totalWordsLearned || 0}
-            suffix="개"
-            color="blue"
-          />
-
-          {/* Duolingo 스타일 스트릭 위젯 - 불꽃 애니메이션, 마일스톤 배지, 스트릭 프리즈 */}
-          <StreakWidget
-            currentStreak={stats?.currentStreak || 0}
-            longestStreak={stats?.longestStreak || 0}
-            lastActiveDate={stats?.lastActiveDate || null}
-            streakFreezeCount={0}  // TODO: 백엔드에서 스트릭 프리즈 아이템 구현 후 연동
-          />
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {/* Start Learning */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
-            <div className="mb-4">
-              <h3 className="text-2xl font-bold mb-2">복습할 단어</h3>
-              <p className="text-blue-100">
-                {dueReviews.count}개의 단어가 복습을 기다리고 있어요
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Link
-                href="/learn"
-                className="inline-block bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition"
-              >
-                학습 시작
-              </Link>
-              <Link
-                href="/quiz"
-                className="inline-block bg-blue-400 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-300 transition"
-              >
-                퀴즈 풀기
-              </Link>
-            </div>
-          </div>
-
-          {/* Daily Goal Widget - Benchmarking: Duolingo 스타일 원형 게이지 + 축하 애니메이션 */}
-          <DailyGoalWidgetEnhanced />
-
-          {/* Subscription Status */}
-          <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
-            <h3 className="text-xl font-bold mb-4">구독 상태</h3>
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-2xl">
-                  {user?.subscriptionStatus === 'TRIAL' && '🎁'}
-                  {user?.subscriptionStatus === 'ACTIVE' && '✅'}
-                  {user?.subscriptionStatus === 'FREE' && '🆓'}
-                </span>
-                <span className="font-semibold">
-                  {user?.subscriptionStatus === 'TRIAL' && '무료 체험'}
-                  {user?.subscriptionStatus === 'ACTIVE' && '프리미엄'}
-                  {user?.subscriptionStatus === 'FREE' && '무료 플랜'}
-                </span>
+        {/* 학습 모드 선택 */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">학습 모드</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href={`/learn?exam=${selectedExam.toLowerCase()}&level=${selectedLevel}`}
+              className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl text-center transition-colors"
+            >
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                <span className="text-xl">📖</span>
               </div>
-              <p className="text-gray-600 text-sm">
-                {user?.subscriptionStatus === 'TRIAL' &&
-                  '무료 체험 기간을 즐기세요!'}
-                {user?.subscriptionStatus === 'ACTIVE' &&
-                  '모든 프리미엄 기능을 사용하고 계십니다'}
-                {user?.subscriptionStatus === 'FREE' &&
-                  '프리미엄으로 업그레이드하여 더 많은 기능을 사용하세요'}
-              </p>
+              <span className="text-sm font-medium text-blue-700">플래시카드</span>
+            </Link>
+            <Link
+              href={`/quiz?exam=${selectedExam}&level=${selectedLevel}`}
+              className="p-4 bg-pink-50 hover:bg-pink-100 rounded-xl text-center transition-colors"
+            >
+              <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+                <span className="text-xl">✅</span>
+              </div>
+              <span className="text-sm font-medium text-pink-700">4지선다 퀴즈</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* 연속 수강일 - FastCampus 스타일 캘린더 */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900">연속 학습일</h2>
+            <span className="text-sm text-gray-500">
+              {currentYear}년 {currentMonth + 1}월
+            </span>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Stats */}
+            <div className="flex-shrink-0 space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span className="text-xl">🔥</span>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.currentStreak || 0}일</p>
+                  <p className="text-xs text-gray-500">현재 연속 학습일</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <span className="text-xl">🏆</span>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.longestStreak || 0}일</p>
+                  <p className="text-xs text-gray-500">최장 기록</p>
+                </div>
+              </div>
             </div>
-            {user?.subscriptionStatus !== 'ACTIVE' && (
-              <Link
-                href="/pricing"
-                className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
-              >
-                업그레이드
-              </Link>
-            )}
+
+            {/* Calendar */}
+            <div className="flex-1">
+              <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
+                {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
+                  <div key={day} className="py-1">{day}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {/* Empty cells for first day offset */}
+                {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+                  <div key={`empty-${i}`} className="aspect-square" />
+                ))}
+                {/* Days of month */}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day = i + 1;
+                  const isToday = day === today.getDate();
+                  const isSunday = (firstDayOfMonth + i) % 7 === 0;
+                  const isSaturday = (firstDayOfMonth + i) % 7 === 6;
+                  // Mock: assume recent days have activity
+                  const hasActivity = day <= today.getDate() && day > today.getDate() - (stats?.currentStreak || 0);
+
+                  return (
+                    <div
+                      key={day}
+                      className={`aspect-square flex items-center justify-center rounded-lg text-sm ${
+                        isToday
+                          ? 'bg-blue-500 text-white font-bold'
+                          : hasActivity
+                          ? 'bg-blue-100 text-blue-700'
+                          : isSunday
+                          ? 'text-red-400'
+                          : isSaturday
+                          ? 'text-blue-400'
+                          : 'text-gray-600'
+                      }`}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Quick Links */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Link href="/chat" className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-2xl p-6 hover:shadow-lg transition relative overflow-hidden">
-            <div className="absolute top-2 right-2 bg-white/20 text-xs px-2 py-1 rounded-full">NEW</div>
-            <div className="text-4xl mb-3">🤖</div>
-            <h3 className="text-lg font-bold mb-1">AI 학습 도우미</h3>
-            <p className="text-sm text-cyan-100">단어 질문, 퀴즈, 학습 팁</p>
-          </Link>
-          <Link href="/words" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">📖</div>
-            <h3 className="text-lg font-bold mb-1">단어 탐색</h3>
-            <p className="text-sm text-gray-600">모든 단어 검색 및 학습</p>
-          </Link>
-          <Link href="/games" className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">🎮</div>
-            <h3 className="text-lg font-bold mb-1">학습 게임</h3>
-            <p className="text-sm text-purple-100">Match, True/False, Write 모드</p>
-          </Link>
-          <Link href="/decks" className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">🃏</div>
-            <h3 className="text-lg font-bold mb-1">커스텀 덱</h3>
-            <p className="text-sm text-indigo-100">Anki 스타일 덱 관리</p>
-          </Link>
-          <Link href="/leagues" className="bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">🏆</div>
-            <h3 className="text-lg font-bold mb-1">리그</h3>
-            <p className="text-sm text-yellow-100">주간 경쟁 & 리더보드</p>
-          </Link>
-          <Link href="/collections" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">📚</div>
-            <h3 className="text-lg font-bold mb-1">컬렉션</h3>
-            <p className="text-sm text-gray-600">주제별 단어 모음</p>
-          </Link>
-          <Link href="/quiz" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">🎯</div>
-            <h3 className="text-lg font-bold mb-1">퀴즈 모드</h3>
-            <p className="text-sm text-gray-600">실력을 테스트하세요</p>
-          </Link>
-          <Link href="/achievements" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">🏆</div>
-            <h3 className="text-lg font-bold mb-1">업적</h3>
-            <p className="text-sm text-gray-600">목표 달성하기</p>
-          </Link>
-          <Link href="/bookmarks" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">⭐</div>
-            <h3 className="text-lg font-bold mb-1">북마크</h3>
-            <p className="text-sm text-gray-600">저장한 단어 모음</p>
-          </Link>
-          <Link href="/history" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">📝</div>
-            <h3 className="text-lg font-bold mb-1">학습 기록</h3>
-            <p className="text-sm text-gray-600">복습 내역 확인</p>
-          </Link>
-          <Link href="/statistics" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">📊</div>
-            <h3 className="text-lg font-bold mb-1">상세 통계</h3>
-            <p className="text-sm text-gray-600">학습 진행 상황 확인</p>
-          </Link>
-          <Link href="/notifications" className="bg-white rounded-2xl p-6 hover:shadow-lg transition relative">
-            <div className="text-4xl mb-3">🔔</div>
-            <h3 className="text-lg font-bold mb-1">알림</h3>
-            <p className="text-sm text-gray-600">알림 및 리마인더</p>
-            {unreadNotifications > 0 && (
-              <span className="absolute top-4 right-4 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {unreadNotifications}
-              </span>
-            )}
-          </Link>
-          <Link href="/settings" className="bg-white rounded-2xl p-6 hover:shadow-lg transition">
-            <div className="text-4xl mb-3">⚙️</div>
-            <h3 className="text-lg font-bold mb-1">설정</h3>
-            <p className="text-sm text-gray-600">프로필 및 환경설정</p>
-          </Link>
-        </div>
-
-        {/* Learning Methods */}
-        <div className="bg-white rounded-2xl p-6 mb-8">
-          <h3 className="text-xl font-bold mb-6">학습 방법</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <MethodCard icon="📸" title="이미지" />
-            <MethodCard icon="🎬" title="동영상" />
-            <MethodCard icon="🎵" title="라이밍" />
-            <MethodCard icon="🧠" title="연상법" />
-            <MethodCard icon="📚" title="어원" />
-            <MethodCard icon="🔄" title="간격반복" />
+        {/* 학습 통계 */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">학습 통계</h2>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="text-center p-4 bg-gray-50 rounded-xl">
+              <p className="text-3xl font-bold text-blue-600">{stats?.totalWordsLearned || 0}</p>
+              <p className="text-sm text-gray-500 mt-1">학습한 단어</p>
+            </div>
+            <div className="text-center p-4 bg-gray-50 rounded-xl">
+              <p className="text-3xl font-bold text-orange-500">{stats?.currentStreak || 0}일</p>
+              <p className="text-sm text-gray-500 mt-1">연속 학습</p>
+            </div>
+            <div className="text-center p-4 bg-gray-50 rounded-xl">
+              <p className="text-3xl font-bold text-green-500">{dueReviewCount}</p>
+              <p className="text-sm text-gray-500 mt-1">복습 대기</p>
+            </div>
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-2xl p-6">
-          <h3 className="text-xl font-bold mb-4">최근 활동</h3>
-          <p className="text-gray-500 text-center py-8">
-            학습을 시작하면 여기에 활동 내역이 표시됩니다
-          </p>
+        {/* 상세 학습 통계 */}
+        <div className="mb-6">
+          <StatsOverview exam={selectedExam} />
         </div>
-      </main>
-    </div>
-  );
-}
 
-function StatCard({
-  icon,
-  title,
-  value,
-  suffix,
-  color,
-}: {
-  icon: string;
-  title: string;
-  value: number;
-  suffix: string;
-  color: string;
-}) {
-  const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
-    orange: 'bg-orange-50 text-orange-600',
-    purple: 'bg-purple-50 text-purple-600',
-  }[color];
-
-  return (
-    <div className={`${colorClasses} rounded-2xl p-6`}>
-      <div className="text-3xl mb-2">{icon}</div>
-      <div className="text-sm opacity-80 mb-1">{title}</div>
-      <div className="text-3xl font-bold">
-        {value}
-        <span className="text-lg ml-1">{suffix}</span>
+        {/* 복습 알림 */}
+        {dueReviewCount > 0 && (
+          <Link
+            href="/review"
+            className="block bg-yellow-50 border border-yellow-200 rounded-2xl p-5 hover:bg-yellow-100 transition"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="text-3xl">📚</span>
+                <div>
+                  <p className="font-bold text-gray-900">복습할 단어가 {dueReviewCount}개 있어요!</p>
+                  <p className="text-sm text-gray-600">지금 복습하면 기억이 더 오래 남아요</p>
+                </div>
+              </div>
+              <span className="text-2xl text-gray-400">→</span>
+            </div>
+          </Link>
+        )}
       </div>
-    </div>
-  );
-}
-
-function MethodCard({ icon, title }: { icon: string; title: string }) {
-  return (
-    <div className="bg-gray-50 rounded-lg p-4 text-center hover:bg-gray-100 transition cursor-pointer">
-      <div className="text-3xl mb-2">{icon}</div>
-      <div className="text-sm font-medium text-gray-700">{title}</div>
-    </div>
+    </TabLayout>
   );
 }

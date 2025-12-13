@@ -634,8 +634,8 @@ export const bulkUpdateStatus = async (
       return res.status(400).json({ message: 'Word IDs array is required' });
     }
 
-    if (!['DRAFT', 'REVIEW', 'APPROVED', 'PUBLISHED'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
+    if (!['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PUBLISHED', 'ARCHIVED'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Valid values: DRAFT, PENDING_REVIEW, APPROVED, PUBLISHED, ARCHIVED' });
     }
 
     const result = await prisma.word.updateMany({
@@ -1138,5 +1138,352 @@ export const createAuditLog = async (
     });
   } catch (error) {
     console.error('Failed to create audit log:', error);
+  }
+};
+
+// ============================================
+// Exam Word Seeding (TEPS/TOEFL/TOEIC/SAT)
+// ============================================
+
+import {
+  checkDuplicates,
+  copyWordContent,
+  DeduplicationResult,
+} from '../utils/wordDeduplication';
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface SeedStats {
+  total: number;
+  copied: number;
+  created: number;
+  skipped: number;
+  errors: number;
+  errorDetails: string[];
+  debugLogs: string[];
+}
+
+/**
+ * Seed exam words with deduplication
+ * POST /admin/seed-exam-words
+ */
+export const seedExamWordsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const body = req.body as {
+      examCategory?: string;
+      level?: string;
+      words?: Array<{ word: string; level?: string }>;
+      dryRun?: boolean;
+      limit?: number;
+      offset?: number;
+    };
+    const {
+      examCategory = 'TEPS',
+      level,
+      words: providedWords,
+      dryRun = false,
+      limit = 50,
+      offset = 0,
+    } = body;
+
+    // Validate exam category
+    const validExams = ['TOEFL', 'TOEIC', 'TEPS', 'SAT'];
+    if (!validExams.includes(examCategory)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid exam category. Must be one of: ${validExams.join(', ')}`,
+      });
+      return;
+    }
+
+    // Load words from JSON file if not provided
+    let wordList: { word: string; level: string }[] = [];
+
+    if (providedWords && Array.isArray(providedWords)) {
+      wordList = providedWords.map((w) => ({
+        word: w.word,
+        level: w.level || level || 'L1',
+      }));
+    } else if (level) {
+      // Load from JSON file
+      const dataPath = path.join(__dirname, '../../data', `${examCategory.toLowerCase()}-words.json`);
+
+      if (!fs.existsSync(dataPath)) {
+        res.status(400).json({
+          success: false,
+          message: `Word list file not found: ${dataPath}`,
+        });
+        return;
+      }
+
+      const fileData = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+      const levelKey = level.toUpperCase();
+
+      // Handle nested structure: { levels: { L1: { words: [...] } } } or flat: { L1: [...] }
+      const levelsData = fileData.levels || fileData;
+      const levelData = levelsData[levelKey];
+
+      if (!levelData) {
+        res.status(400).json({
+          success: false,
+          message: `Level ${level} not found in word list. Available: ${Object.keys(levelsData).join(', ')}`,
+        });
+        return;
+      }
+
+      // Handle { words: [...] } or direct array
+      const wordsArray = Array.isArray(levelData) ? levelData : levelData.words;
+
+      if (!wordsArray || !Array.isArray(wordsArray)) {
+        res.status(400).json({
+          success: false,
+          message: `Invalid word list format for level ${level}`,
+        });
+        return;
+      }
+
+      wordList = wordsArray.map((word: string) => ({
+        word,
+        level: levelKey,
+      }));
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Either "words" array or "level" parameter is required',
+      });
+      return;
+    }
+
+    // Apply limit and offset
+    const paginatedWords = wordList.slice(offset, offset + limit);
+    const hasMore = offset + limit < wordList.length;
+
+    const stats: SeedStats = {
+      total: paginatedWords.length,
+      copied: 0,
+      created: 0,
+      skipped: 0,
+      errors: 0,
+      errorDetails: [],
+      debugLogs: [],
+    };
+
+    // Check duplicates (finds CSAT words, excludes target exam)
+    const wordsToCheck = paginatedWords.map((w) => w.word);
+    const duplicateResults = await checkDuplicates(wordsToCheck, examCategory);
+
+    stats.debugLogs.push(`checkDuplicates returned ${duplicateResults.length} results`);
+
+    for (let i = 0; i < duplicateResults.length; i++) {
+      const result = duplicateResults[i];
+      const wordData = paginatedWords[i];
+      const targetLevel = wordData.level || 'L1';
+
+      stats.debugLogs.push(
+        `[${result.word}] isNew=${result.isNew}, existingExam=${result.existingExam}, existingWordId=${result.existingWordId}`
+      );
+
+      // CASE 1: Word already exists in target exam (TEPS) - skip
+      if (!result.isNew && result.existingExam === examCategory) {
+        stats.debugLogs.push(`[${result.word}] CASE 1: Already in ${examCategory}, skipping`);
+        stats.skipped++;
+        continue;
+      }
+
+      // CASE 2: Word exists in another exam (CSAT) - copy content
+      if (!result.isNew && result.existingWordId && result.existingExam !== examCategory) {
+        stats.debugLogs.push(
+          `[${result.word}] CASE 2: Found in ${result.existingExam} (${result.existingWordId}), copying...`
+        );
+
+        if (dryRun) {
+          stats.copied++;
+          continue;
+        }
+
+        const copyResult = await copyWordContent(
+          result.existingWordId,
+          examCategory as any,
+          targetLevel
+        );
+
+        if (copyResult.success) {
+          stats.debugLogs.push(`[${result.word}] Copy SUCCESS: ${copyResult.newWordId}`);
+          stats.copied++;
+        } else if (copyResult.error?.includes('already exists')) {
+          stats.debugLogs.push(`[${result.word}] Copy SKIPPED: already exists in target`);
+          stats.skipped++;
+        } else {
+          stats.debugLogs.push(`[${result.word}] Copy FAILED: ${copyResult.error}`);
+          stats.errorDetails.push(`${result.word}: ${copyResult.error}`);
+          stats.errors++;
+        }
+        continue;
+      }
+
+      // CASE 3: New word - create as DRAFT (needs AI generation)
+      stats.debugLogs.push(`[${result.word}] CASE 3: New word, creating DRAFT`);
+
+      if (dryRun) {
+        stats.created++;
+        continue;
+      }
+
+      try {
+        // Check if already exists
+        const existing = await prisma.word.findFirst({
+          where: {
+            word: { equals: result.word, mode: 'insensitive' },
+            examCategory: examCategory as any,
+          },
+        });
+
+        if (existing) {
+          stats.debugLogs.push(`[${result.word}] Already exists in ${examCategory}`);
+          stats.skipped++;
+          continue;
+        }
+
+        await prisma.word.create({
+          data: {
+            word: result.word,
+            definition: '',
+            partOfSpeech: 'NOUN',
+            examCategory: examCategory as any,
+            level: targetLevel,
+            status: 'DRAFT',
+          },
+        });
+
+        stats.debugLogs.push(`[${result.word}] Created as DRAFT`);
+        stats.created++;
+      } catch (error: any) {
+        if (error.code === 'P2002') {
+          stats.skipped++;
+        } else {
+          stats.errorDetails.push(`${result.word}: ${error.message}`);
+          stats.errors++;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      dryRun,
+      examCategory,
+      level: level || 'custom',
+      pagination: {
+        offset,
+        limit,
+        processed: paginatedWords.length,
+        totalInLevel: wordList.length,
+        hasMore,
+        nextOffset: hasMore ? offset + limit : null,
+      },
+      stats: {
+        total: stats.total,
+        copied: stats.copied,
+        created: stats.created,
+        skipped: stats.skipped,
+        errors: stats.errors,
+        errorDetails: stats.errorDetails,
+      },
+      debugLogs: stats.debugLogs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Delete exam words (for cleanup/re-seeding)
+ * DELETE /admin/delete-exam-words
+ */
+export const deleteExamWordsHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const body = req.body as {
+      examCategory?: string;
+      level?: string;
+      dryRun?: boolean;
+    };
+    const { examCategory, level, dryRun = true } = body;
+
+    if (!examCategory) {
+      res.status(400).json({
+        success: false,
+        message: 'examCategory is required',
+      });
+      return;
+    }
+
+    const validExams = ['TOEFL', 'TOEIC', 'TEPS', 'SAT'];
+    if (!validExams.includes(examCategory)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid exam category. Must be one of: ${validExams.join(', ')}`,
+      });
+      return;
+    }
+
+    // Build where clause
+    const whereClause: any = {
+      examCategory: examCategory as any,
+    };
+
+    if (level) {
+      whereClause.level = level.toUpperCase();
+    }
+
+    // Count words to delete
+    const count = await prisma.word.count({ where: whereClause });
+
+    if (dryRun) {
+      res.json({
+        success: true,
+        dryRun: true,
+        examCategory,
+        level: level || 'all',
+        wouldDelete: count,
+        message: `Would delete ${count} words. Set dryRun=false to execute.`,
+      });
+      return;
+    }
+
+    // Delete related content first (cascade)
+    const words = await prisma.word.findMany({
+      where: whereClause,
+      select: { id: true },
+    });
+    const wordIds = words.map((w) => w.id);
+
+    // Delete relations
+    await prisma.etymology.deleteMany({ where: { wordId: { in: wordIds } } });
+    await prisma.mnemonic.deleteMany({ where: { wordId: { in: wordIds } } });
+    await prisma.example.deleteMany({ where: { wordId: { in: wordIds } } });
+    await prisma.collocation.deleteMany({ where: { wordId: { in: wordIds } } });
+    await prisma.wordVisual.deleteMany({ where: { wordId: { in: wordIds } } });
+    await prisma.synonym.deleteMany({ where: { wordId: { in: wordIds } } });
+    await prisma.antonym.deleteMany({ where: { wordId: { in: wordIds } } });
+
+    // Delete words
+    const deleted = await prisma.word.deleteMany({ where: whereClause });
+
+    res.json({
+      success: true,
+      dryRun: false,
+      examCategory,
+      level: level || 'all',
+      deleted: deleted.count,
+    });
+  } catch (error) {
+    next(error);
   }
 };
