@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { RootErrorBoundaryWrapper } from '@/components/errors/RootErrorBoundaryWrapper';
 import { OfflineBannerWrapper } from '@/components/errors/OfflineBannerWrapper';
 import Providers from '@/components/providers/Providers';
 
@@ -17,12 +16,10 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="font-sans antialiased">
-        <RootErrorBoundaryWrapper>
-          <Providers>
-            <OfflineBannerWrapper />
-            {children}
-          </Providers>
-        </RootErrorBoundaryWrapper>
+        <Providers>
+          <OfflineBannerWrapper />
+          {children}
+        </Providers>
       </body>
     </html>
   );
