@@ -14,19 +14,8 @@ export {
   type StudyTypeCardProps,
 } from "./home/CategoryCard";
 
-// Quiz Components
-export {
-  QuizChoice,
-  QuizQuestion,
-  QuizContainer,
-  QuizFeedback,
-  QuizDemo,
-  useQuiz,
-  type QuizStatus,
-  type QuizChoiceProps,
-  type QuizQuestionProps,
-  type QuizContainerProps,
-} from "./quiz/QuizChoice";
+// Quiz Components - exported from quiz/index.ts
+// Note: QuizChoice was deprecated and removed
 
 // Navigation Components
 export {
