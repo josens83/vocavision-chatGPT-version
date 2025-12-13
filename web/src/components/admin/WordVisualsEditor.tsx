@@ -249,6 +249,41 @@ export default function WordVisualsEditor({
     }
   };
 
+  // Call Claude API for smart content generation
+  const generateSmartContent = async (types: string[]): Promise<{
+    mnemonicPrompt?: string;
+    mnemonicCaption?: { ko: string; en: string };
+    rhymeCaption?: { ko: string; en: string };
+  } | null> => {
+    try {
+      const response = await fetch('/api/admin/generate-smart-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wordData: {
+            word,
+            definitionEn: wordData?.definitionEn,
+            definitionKo: wordData?.definitionKo,
+            mnemonic: wordData?.mnemonic,
+            mnemonicKorean: wordData?.mnemonicKorean,
+            rhymingWords: wordData?.rhymingWords,
+          },
+          types,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      }
+      console.warn('[Smart Content] API returned error:', result.error);
+      return null;
+    } catch (err) {
+      console.warn('[Smart Content] API call failed, falling back to templates:', err);
+      return null;
+    }
+  };
+
   // Generate all 3 images at once with auto prompts and captions
   // IMPORTANT: Accumulates all results and updates state once at the end to avoid race conditions
   const handleBatchGenerate = async () => {
@@ -271,6 +306,27 @@ export default function WordVisualsEditor({
       return;
     }
 
+    // Step 0: Try to get smart content from Claude API
+    setBatchProgress({ current: 0, total: typesToGenerate.length, message: 'Claude AI로 스마트 콘텐츠 생성 중...' });
+
+    const smartContentTypes: string[] = [];
+    if (typesToGenerate.includes('MNEMONIC')) {
+      smartContentTypes.push('MNEMONIC_PROMPT', 'MNEMONIC_CAPTION');
+    }
+    if (typesToGenerate.includes('RHYME')) {
+      smartContentTypes.push('RHYME_CAPTION');
+    }
+
+    let smartContent: {
+      mnemonicPrompt?: string;
+      mnemonicCaption?: { ko: string; en: string };
+      rhymeCaption?: { ko: string; en: string };
+    } | null = null;
+
+    if (smartContentTypes.length > 0 && wordData?.mnemonic) {
+      smartContent = await generateSmartContent(smartContentTypes);
+    }
+
     // Accumulate all results here
     const accumulatedResults: Record<VisualType, Partial<WordVisualInput>> = {} as Record<VisualType, Partial<WordVisualInput>>;
 
@@ -279,19 +335,36 @@ export default function WordVisualsEditor({
       const config = VISUAL_TYPE_CONFIG[type];
       const existingVisual = initialVisuals[type];
 
-      // Step 1: Generate prompt and captions
+      // Step 1: Generate prompt and captions (with smart content fallback)
       setBatchProgress({
         current: i + 1,
         total: typesToGenerate.length,
         message: `${config.labelKo} 프롬프트 생성 중...`
       });
 
-      const { prompt, captionKo, captionEn } = generatePromptData(type);
+      // Get template-generated content as fallback
+      const { prompt: templatePrompt, captionKo: templateCaptionKo, captionEn: templateCaptionEn } = generatePromptData(type);
 
-      // Use existing values if set, otherwise use generated ones
-      const newPrompt = existingVisual.promptEn || prompt;
-      const newCaptionKo = existingVisual.captionKo || captionKo;
-      const newCaptionEn = existingVisual.captionEn || captionEn;
+      // Use smart content if available, otherwise use template
+      let newPrompt = existingVisual.promptEn || templatePrompt;
+      let newCaptionKo = existingVisual.captionKo || templateCaptionKo;
+      let newCaptionEn = existingVisual.captionEn || templateCaptionEn;
+
+      // Override with smart content for specific types
+      if (type === 'MNEMONIC' && smartContent) {
+        if (smartContent.mnemonicPrompt && !existingVisual.promptEn) {
+          newPrompt = smartContent.mnemonicPrompt;
+        }
+        if (smartContent.mnemonicCaption && !existingVisual.captionKo) {
+          newCaptionKo = smartContent.mnemonicCaption.ko;
+          newCaptionEn = smartContent.mnemonicCaption.en;
+        }
+      } else if (type === 'RHYME' && smartContent?.rhymeCaption) {
+        if (!existingVisual.captionKo) {
+          newCaptionKo = smartContent.rhymeCaption.ko;
+          newCaptionEn = smartContent.rhymeCaption.en;
+        }
+      }
 
       // Store prompt/caption results
       accumulatedResults[type] = {
