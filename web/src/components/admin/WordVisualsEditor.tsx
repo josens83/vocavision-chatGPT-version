@@ -86,7 +86,7 @@ export default function WordVisualsEditor({
   const [uploading, setUploading] = useState<VisualType | null>(null);
   const [generating, setGenerating] = useState<VisualType | null>(null);
   const [batchGenerating, setBatchGenerating] = useState(false);
-  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [jsonInput, setJsonInput] = useState('');
   const [showJsonImport, setShowJsonImport] = useState(false);
@@ -224,10 +224,47 @@ export default function WordVisualsEditor({
     }
   };
 
-  // Generate all 3 images at once
+  // Generate prompt for a type (returns prompt and caption data)
+  const generatePromptData = (type: VisualType): { prompt: string; captionKo: string; captionEn: string } => {
+    let prompt = '';
+    let captionKo = '';
+    let captionEn = '';
+
+    switch (type) {
+      case 'CONCEPT':
+        prompt = PROMPT_TEMPLATES.CONCEPT(
+          word,
+          wordData?.definitionEn || 'a concept or idea'
+        );
+        captionKo = wordData?.definitionKo || `${word}의 의미`;
+        captionEn = wordData?.definitionEn || `The meaning of ${word}`;
+        break;
+      case 'MNEMONIC':
+        prompt = PROMPT_TEMPLATES.MNEMONIC(
+          word,
+          wordData?.mnemonic || `a memorable scene for ${word}`,
+          wordData?.mnemonicKorean
+        );
+        captionKo = wordData?.mnemonicKorean || `${word} 연상법`;
+        captionEn = wordData?.mnemonic || `Memory tip for ${word}`;
+        break;
+      case 'RHYME':
+        prompt = PROMPT_TEMPLATES.RHYME(
+          word,
+          wordData?.rhymingWords || ['similar', 'sounding', 'words']
+        );
+        captionKo = `${word}와 비슷한 발음: ${(wordData?.rhymingWords || []).slice(0, 3).join(', ')}`;
+        captionEn = `Rhymes with: ${(wordData?.rhymingWords || []).slice(0, 3).join(', ')}`;
+        break;
+    }
+
+    return { prompt, captionKo, captionEn };
+  };
+
+  // Generate all 3 images at once with auto prompts and captions
   const handleBatchGenerate = async () => {
     setBatchGenerating(true);
-    setBatchProgress({ current: 0, total: 3 });
+    setBatchProgress({ current: 0, total: 3, message: '준비 중...' });
     setError(null);
 
     const typesToGenerate = VISUAL_TYPES.filter((type) => {
@@ -242,26 +279,47 @@ export default function WordVisualsEditor({
       return;
     }
 
-    setBatchProgress({ current: 0, total: typesToGenerate.length });
-
     for (let i = 0; i < typesToGenerate.length; i++) {
       const type = typesToGenerate[i];
+      const config = VISUAL_TYPE_CONFIG[type];
       const visual = getVisual(type);
 
-      // Auto-generate prompt if not set
-      if (!visual.promptEn) {
-        handleAutoGeneratePrompt(type);
-      }
+      // Step 1: Generate prompt and captions
+      setBatchProgress({
+        current: i + 1,
+        total: typesToGenerate.length,
+        message: `${config.labelKo} 프롬프트 생성 중...`
+      });
 
-      setBatchProgress({ current: i + 1, total: typesToGenerate.length });
+      const { prompt, captionKo, captionEn } = generatePromptData(type);
+
+      // Update visual with prompt and captions
+      const newPrompt = visual.promptEn || prompt;
+      const newCaptionKo = visual.captionKo || captionKo;
+      const newCaptionEn = visual.captionEn || captionEn;
+
+      updateVisual(type, {
+        promptEn: newPrompt,
+        captionKo: newCaptionKo,
+        captionEn: newCaptionEn
+      });
+
+      // Small delay to show prompt generation
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Step 2: Generate AI image
+      setBatchProgress({
+        current: i + 1,
+        total: typesToGenerate.length,
+        message: `${config.labelKo} 이미지 생성 중...`
+      });
 
       try {
-        const currentVisual = getVisual(type);
         const response = await fetch('/api/admin/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: currentVisual.promptEn || PROMPT_TEMPLATES.CONCEPT(word, wordData?.definitionEn || ''),
+            prompt: newPrompt,
             visualType: type,
             word,
             wordId,
@@ -271,7 +329,14 @@ export default function WordVisualsEditor({
         const result = await response.json();
 
         if (result.success) {
-          updateVisual(type, { imageUrl: result.data.imageUrl });
+          updateVisual(type, {
+            imageUrl: result.data.imageUrl,
+            promptEn: newPrompt,
+            captionKo: newCaptionKo,
+            captionEn: newCaptionEn
+          });
+        } else {
+          console.error(`Failed to generate ${type}:`, result.error);
         }
       } catch (err) {
         console.error(`Failed to generate ${type}:`, err);
@@ -283,6 +348,8 @@ export default function WordVisualsEditor({
       }
     }
 
+    setBatchProgress({ current: typesToGenerate.length, total: typesToGenerate.length, message: '완료!' });
+    await new Promise((r) => setTimeout(r, 1000));
     setBatchGenerating(false);
     setBatchProgress(null);
   };
@@ -428,12 +495,13 @@ export default function WordVisualsEditor({
           <button
             onClick={handleBatchGenerate}
             disabled={batchGenerating || generating !== null}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg text-sm font-medium hover:from-purple-600 hover:to-pink-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/25"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg text-sm font-medium hover:from-purple-600 hover:to-pink-600 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/25 min-w-[200px] justify-center"
           >
-            {batchGenerating ? (
+            {batchGenerating && batchProgress ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {batchProgress && `${batchProgress.current}/${batchProgress.total}`}
+                <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
+                <span className="truncate">{batchProgress.message}</span>
+                <span className="text-xs opacity-75 flex-shrink-0">({batchProgress.current}/{batchProgress.total})</span>
               </>
             ) : (
               <>
