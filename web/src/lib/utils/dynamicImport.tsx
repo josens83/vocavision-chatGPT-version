@@ -83,7 +83,6 @@ export const LAZY_ROUTES = {
   heatmap: () => import('@/components/statistics/LearningHeatmap'),
   analytics: () => import('@/components/statistics/PredictiveAnalytics'),
   wordChart: () => import('@/components/statistics/WordAccuracyChart'),
-  mnemonics: () => import('@/components/learning/CommunityMnemonics'),
   flashcard: () => import('@/components/learning/FlashCardGesture'),
 };
 
