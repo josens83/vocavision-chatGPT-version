@@ -273,11 +273,11 @@ async function generateImage(prompt: string, visualType: VisualType): Promise<st
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json() as { message?: string };
     throw new Error(`Stability AI error: ${error.message || response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as { artifacts?: Array<{ base64: string }> };
 
   if (data.artifacts && data.artifacts.length > 0) {
     return data.artifacts[0].base64;
@@ -314,11 +314,11 @@ async function uploadToCloudinary(base64Data: string, word: string, visualType: 
   );
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json() as { error?: { message?: string } };
     throw new Error(`Cloudinary error: ${error.error?.message || response.statusText}`);
   }
 
-  const result = await response.json();
+  const result = await response.json() as { secure_url: string };
   return result.secure_url;
 }
 
