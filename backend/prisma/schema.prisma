@@ -90,7 +90,7 @@ enum SubscriptionPlan {
 
 model Word {
   id          String   @id @default(uuid())
-  word        String   @unique
+  word        String
   definition  String
   definitionKo String?  // 한국어 뜻
   pronunciation String?
@@ -145,6 +145,7 @@ model Word {
   // Relations
   examples    Example[]
   images      WordImage[]
+  visuals     WordVisual[]   // 3-이미지 시각화 시스템
   videos      WordVideo[]
   rhymes      Rhyme[]
   mnemonics   Mnemonic[]
@@ -155,6 +156,7 @@ model Word {
   progress    UserProgress[]
   examLevels  WordExamLevel[]  // 다중 시험/레벨 매핑
 
+  @@unique([word, examCategory])  // 같은 단어를 여러 시험에 추가 가능
   @@index([word])
   @@index([difficulty])
   @@index([cefrLevel])
@@ -278,6 +280,48 @@ enum ImageSource {
   STOCK_PHOTO
   ILLUSTRATION
   USER_UPLOADED
+}
+
+// ===== 3-이미지 시각화 시스템 (VocaVision 핵심 기능) =====
+// 각 단어마다 3가지 이미지로 시각화
+// - Concept (의미): 단어 의미를 직관적으로 보여주는 이미지
+// - Mnemonic (연상): 한국어식 연상법에 맞는 이미지
+// - Rhyme (라이밍): 발음/라이밍 기반 상황 이미지
+model WordVisual {
+  id          String      @id @default(uuid())
+  wordId      String
+  type        VisualType
+
+  // 라벨 (탭 표시용)
+  labelEn     String?     // "Concept", "Mnemonic", "Rhyme"
+  labelKo     String?     // "의미", "연상", "라이밍"
+
+  // 캡션 (이미지 설명)
+  captionEn   String?     // 영어 캡션
+  captionKo   String?     // 한국어 캡션 (학습자용)
+
+  // 이미지 URL (정적 이미지 또는 GIF)
+  imageUrl    String?     // Cloudinary URL (GIF 지원)
+
+  // AI 이미지 생성 프롬프트
+  promptEn    String?     @db.Text  // DALL-E/Midjourney 프롬프트
+
+  // 정렬 순서
+  order       Int         @default(0)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  word        Word        @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@unique([wordId, type])
+  @@index([wordId])
+}
+
+enum VisualType {
+  CONCEPT    // 의미 시각화 (dormant → 휴화산)
+  MNEMONIC   // 연상법 이미지 (dormant → doorman이 졸고 있음)
+  RHYME      // 라이밍 이미지 (daunting to dormant man)
 }
 
 // 3. Videos/Animations
@@ -780,6 +824,45 @@ enum LeagueResult {
   PROMOTED
   STAYED
   DEMOTED
+}
+
+// ============================================
+// Learning Records (퀴즈/학습 기록)
+// ============================================
+
+model LearningRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  wordId          String
+
+  // 퀴즈 타입
+  quizType        QuizType
+
+  // 결과
+  isCorrect       Boolean
+  selectedAnswer  String?   // 선택한 답
+  correctAnswer   String?   // 정답
+
+  // 시간
+  responseTime    Int?      // 응답 시간 (ms)
+
+  // 세션 정보
+  sessionId       String?   // 세션 그룹화용
+
+  createdAt       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([userId, quizType])
+  @@index([sessionId])
+}
+
+enum QuizType {
+  LEVEL_TEST      // 레벨 테스트
+  ENG_TO_KOR      // 영→한 퀴즈
+  KOR_TO_ENG      // 한→영 퀴즈
+  FLASHCARD       // 플래시카드
+  SPELLING        // 스펠링
 }
 
 // ============================================

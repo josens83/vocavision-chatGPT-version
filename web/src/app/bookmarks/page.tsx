@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmModal';
+import { EmptyFirstTime } from '@/components/ui/EmptyState';
+import { SkeletonListItem } from '@/components/ui/Skeleton';
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -24,6 +28,8 @@ interface Bookmark {
 export default function BookmarksPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +58,15 @@ export default function BookmarksPage() {
   };
 
   const handleRemoveBookmark = async (wordId: string) => {
-    if (!confirm('북마크를 삭제하시겠습니까?')) return;
+    const confirmed = await confirm({
+      title: '북마크 삭제',
+      message: '이 단어를 북마크에서 삭제하시겠습니까?',
+      confirmText: '삭제',
+      cancelText: '취소',
+      type: 'warning',
+    });
+
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('authToken');
@@ -60,9 +74,10 @@ export default function BookmarksPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBookmarks(bookmarks.filter(b => b.wordId !== wordId));
+      toast.success('북마크 삭제 완료', '북마크가 삭제되었습니다');
     } catch (error) {
       console.error('Failed to remove bookmark:', error);
-      alert('북마크 삭제 실패');
+      toast.error('북마크 삭제 실패', '다시 시도해주세요');
     }
   };
 
@@ -82,8 +97,28 @@ export default function BookmarksPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">로딩 중...</div>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+                ← 대시보드
+              </Link>
+              <h1 className="text-2xl font-bold text-blue-600">내 북마크</h1>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8 max-w-5xl">
+          <div className="mb-8">
+            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <SkeletonListItem key={i} />
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -111,19 +146,7 @@ export default function BookmarksPage() {
         </div>
 
         {bookmarks.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center">
-            <div className="text-6xl mb-4">⭐</div>
-            <h3 className="text-2xl font-bold mb-2">북마크가 없습니다</h3>
-            <p className="text-gray-600 mb-6">
-              학습하고 싶은 단어를 북마크해보세요
-            </p>
-            <Link
-              href="/words"
-              className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-            >
-              단어 탐색하기
-            </Link>
-          </div>
+          <EmptyFirstTime type="bookmarks" />
         ) : (
           <div className="space-y-4">
             {bookmarks.map((bookmark) => (

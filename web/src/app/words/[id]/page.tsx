@@ -8,10 +8,17 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { wordsAPI, progressAPI } from '@/lib/api';
-import CommunityMnemonics from '@/components/learning/CommunityMnemonics';
 
 // Benchmarking: Enhanced word detail page with community mnemonics
 // Phase 2-3: Memrise-style community engagement
+
+interface WordVisual {
+  type: 'CONCEPT' | 'MNEMONIC' | 'RHYME';
+  imageUrl?: string | null;
+  captionEn?: string;
+  captionKo?: string;
+  labelKo?: string;
+}
 
 interface Word {
   id: string;
@@ -46,6 +53,8 @@ interface Word {
   synonyms?: any[];
   antonyms?: any[];
   collocations?: any[];
+  // New visuals system
+  visuals?: WordVisual[];
 }
 
 export default function WordDetailPage({ params }: { params: { id: string } }) {
@@ -58,13 +67,9 @@ export default function WordDetailPage({ params }: { params: { id: string } }) {
   const [activeTab, setActiveTab] = useState<'overview' | 'examples' | 'mnemonics' | 'etymology'>('overview');
 
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-
+    // Allow guest access - no login required for viewing words
     loadWord();
-  }, [user, params.id]);
+  }, [params.id]);
 
   const loadWord = async () => {
     try {
@@ -275,7 +280,48 @@ export default function WordDetailPage({ params }: { params: { id: string } }) {
           <div className="p-8">
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                {/* Images */}
+                {/* Visuals (3-이미지 시각화) */}
+                {word.visuals && word.visuals.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-bold mb-4">🎨 시각화 학습</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      {word.visuals.map((visual, i) => (
+                        visual.imageUrl && (
+                          <div key={i} className="bg-gray-50 rounded-xl overflow-hidden border border-gray-200">
+                            <div className="relative">
+                              <img
+                                src={visual.imageUrl}
+                                alt={`${word.word} - ${visual.type}`}
+                                className="w-full h-48 object-cover"
+                              />
+                              <span className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+                                visual.type === 'CONCEPT' ? 'bg-blue-500 text-white' :
+                                visual.type === 'MNEMONIC' ? 'bg-purple-500 text-white' :
+                                'bg-pink-500 text-white'
+                              }`}>
+                                {visual.type === 'CONCEPT' ? '💡 개념' :
+                                 visual.type === 'MNEMONIC' ? '🧠 연상' : '🎵 라임'}
+                              </span>
+                            </div>
+                            <div className="p-3">
+                              {visual.labelKo && (
+                                <p className="font-semibold text-gray-900 mb-1">{visual.labelKo}</p>
+                              )}
+                              {visual.captionKo && (
+                                <p className="text-sm text-gray-600">{visual.captionKo}</p>
+                              )}
+                              {visual.captionEn && !visual.captionKo && (
+                                <p className="text-sm text-gray-600">{visual.captionEn}</p>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Legacy Images */}
                 {word.images && word.images.length > 0 && (
                   <div>
                     <h3 className="text-xl font-bold mb-4">📸 이미지 학습</h3>
@@ -452,10 +498,6 @@ export default function WordDetailPage({ params }: { params: { id: string } }) {
                   </div>
                 )}
 
-                {/* Community Mnemonics - Phase 2-3 */}
-                <div className="mt-8">
-                  <CommunityMnemonics wordId={word.id} wordText={word.word} />
-                </div>
               </div>
             )}
 

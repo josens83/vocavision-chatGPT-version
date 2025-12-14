@@ -1,39 +1,82 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
 import { wordsAPI } from '@/lib/api';
+import { EmptySearchResults } from '@/components/ui/EmptyState';
+import { SkeletonWordCard } from '@/components/ui/Skeleton';
 
 interface Word {
   id: string;
   word: string;
   definition: string;
+  definitionKo?: string;
   pronunciation?: string;
   difficulty: string;
   partOfSpeech: string;
+  examCategory?: string;
+  level?: string;
 }
 
+// Wrap with Suspense for useSearchParams
 export default function WordsPage() {
+  return (
+    <Suspense fallback={<WordsPageLoading />}>
+      <WordsPageContent />
+    </Suspense>
+  );
+}
+
+function WordsPageLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </header>
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <SkeletonWordCard key={i} />
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function WordsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const user = useAuthStore((state) => state.user);
+
+  // Get initial search from URL parameter
+  const initialSearch = searchParams.get('search') || '';
 
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [difficulty, setDifficulty] = useState('');
+  const [search, setSearch] = useState(initialSearch);
+  const [examCategory, setExamCategory] = useState('');
+  const [level, setLevel] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
+  // Initial load with URL search param
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login');
-      return;
-    }
-
     loadWords();
-  }, [user, page, difficulty]);
+    setInitialLoadDone(true);
+  }, []);
+
+  // Reload when filters change (after initial load)
+  useEffect(() => {
+    if (initialLoadDone) {
+      loadWords();
+    }
+  }, [page, examCategory, level]);
 
   const loadWords = async () => {
     setLoading(true);
@@ -41,7 +84,8 @@ export default function WordsPage() {
       const data = await wordsAPI.getWords({
         page,
         limit: 20,
-        difficulty: difficulty || undefined,
+        examCategory: examCategory || undefined,
+        level: level || undefined,
         search: search || undefined,
       });
       setWords(data.words);
@@ -124,86 +168,84 @@ export default function WordsPage() {
             </div>
           </form>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                setDifficulty('');
-                setPage(1);
-              }}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                difficulty === ''
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              전체
-            </button>
-            <button
-              onClick={() => {
-                setDifficulty('BEGINNER');
-                setPage(1);
-              }}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                difficulty === 'BEGINNER'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-              }`}
-            >
-              초급
-            </button>
-            <button
-              onClick={() => {
-                setDifficulty('INTERMEDIATE');
-                setPage(1);
-              }}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                difficulty === 'INTERMEDIATE'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-              }`}
-            >
-              중급
-            </button>
-            <button
-              onClick={() => {
-                setDifficulty('ADVANCED');
-                setPage(1);
-              }}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                difficulty === 'ADVANCED'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-              }`}
-            >
-              고급
-            </button>
-            <button
-              onClick={() => {
-                setDifficulty('EXPERT');
-                setPage(1);
-              }}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                difficulty === 'EXPERT'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-red-100 text-red-700 hover:bg-red-200'
-              }`}
-            >
-              전문가
-            </button>
+          {/* 시험 필터 */}
+          <div className="space-y-3">
+            <div>
+              <span className="text-sm text-gray-500 mr-3">시험</span>
+              <div className="inline-flex gap-2 flex-wrap">
+                {[
+                  { value: '', label: '전체', color: 'gray' },
+                  { value: 'CSAT', label: '수능', color: 'blue' },
+                  { value: 'TEPS', label: 'TEPS', color: 'purple' },
+                  { value: 'TOEFL', label: 'TOEFL', color: 'orange' },
+                  { value: 'TOEIC', label: 'TOEIC', color: 'green' },
+                ].map(({ value, label, color }) => (
+                  <button
+                    key={value}
+                    onClick={() => {
+                      setExamCategory(value);
+                      setPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                      examCategory === value
+                        ? `bg-${color}-600 text-white`
+                        : `bg-${color}-100 text-${color}-700 hover:bg-${color}-200`
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 레벨 필터 */}
+            <div>
+              <span className="text-sm text-gray-500 mr-3">레벨</span>
+              <div className="inline-flex gap-2 flex-wrap">
+                {[
+                  { value: '', label: '전체' },
+                  { value: 'L1', label: '초급' },
+                  { value: 'L2', label: '중급' },
+                  { value: 'L3', label: '고급' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => {
+                      setLevel(value);
+                      setPage(1);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                      level === value
+                        ? 'bg-pink-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Words Grid */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="text-xl text-gray-600">로딩 중...</div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonWordCard key={i} />
+            ))}
           </div>
         ) : words.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
-            <div className="text-xl text-gray-600 mb-2">검색 결과가 없습니다</div>
-            <p className="text-gray-500">다른 검색어를 시도해보세요</p>
-          </div>
+          <EmptySearchResults
+            query={search || examCategory || level}
+            onClear={() => {
+              setSearch('');
+              setExamCategory('');
+              setLevel('');
+              setPage(1);
+              loadWords();
+            }}
+          />
         ) : (
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -241,6 +283,31 @@ export default function WordsPage() {
   );
 }
 
+// Exam display names
+const examDisplayNames: Record<string, string> = {
+  CSAT: '수능',
+  SAT: 'SAT',
+  TOEFL: 'TOEFL',
+  TOEIC: 'TOEIC',
+  TEPS: 'TEPS',
+};
+
+// Level display names
+const levelDisplayNames: Record<string, string> = {
+  L1: '초급',
+  L2: '중급',
+  L3: '고급',
+};
+
+// Exam colors for badges
+const examBadgeColors: Record<string, string> = {
+  CSAT: 'bg-blue-100 text-blue-600',
+  SAT: 'bg-emerald-100 text-emerald-600',
+  TOEFL: 'bg-orange-100 text-orange-600',
+  TOEIC: 'bg-green-100 text-green-600',
+  TEPS: 'bg-purple-100 text-purple-600',
+};
+
 function WordCard({
   word,
   difficultyColors,
@@ -250,6 +317,10 @@ function WordCard({
   difficultyColors: any;
   difficultyLabels: any;
 }) {
+  const examName = word.examCategory ? examDisplayNames[word.examCategory] || word.examCategory : null;
+  const levelName = word.level ? levelDisplayNames[word.level] || word.level : null;
+  const badgeColor = word.examCategory ? examBadgeColors[word.examCategory] || 'bg-gray-100 text-gray-600' : '';
+
   return (
     <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition cursor-pointer">
       <div className="flex justify-between items-start mb-4">
@@ -259,15 +330,24 @@ function WordCard({
             <p className="text-sm text-gray-500">{word.pronunciation}</p>
           )}
         </div>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-            difficultyColors[word.difficulty]
-          }`}
-        >
-          {difficultyLabels[word.difficulty]}
-        </span>
+        {/* Exam + Level Badge */}
+        <div className="flex flex-col gap-1 items-end">
+          {examName && levelName ? (
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${badgeColor}`}>
+              {examName} {levelName}
+            </span>
+          ) : (
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                difficultyColors[word.difficulty]
+              }`}
+            >
+              {difficultyLabels[word.difficulty]}
+            </span>
+          )}
+        </div>
       </div>
-      <p className="text-gray-700 mb-3">{word.definition}</p>
+      <p className="text-gray-700 mb-3">{word.definitionKo || word.definition}</p>
       <div className="flex items-center justify-between">
         <span className="text-sm text-gray-500">{word.partOfSpeech}</span>
         <Link

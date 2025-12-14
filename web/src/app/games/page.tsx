@@ -80,13 +80,13 @@ export default function GamesPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-8 md:py-12">
         {/* Title */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl font-bold text-gray-900 mb-4"
+            className="text-3xl md:text-5xl font-bold text-gray-900 mb-4"
           >
             🎮 학습 게임
           </motion.h1>
@@ -94,7 +94,7 @@ export default function GamesPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-xl text-gray-600"
+            className="text-lg md:text-xl text-gray-600"
           >
             재미있는 게임으로 단어를 학습하세요!
           </motion.p>
@@ -102,14 +102,14 @@ export default function GamesPage() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-gray-500 mt-2"
+            className="text-gray-500 mt-2 text-sm md:text-base"
           >
             Quizlet 스타일의 다양한 학습 모드를 제공합니다
           </motion.p>
         </div>
 
         {/* Game Modes Grid */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
           {gameModes.map((mode, index) => (
             <motion.div
               key={mode.id}
@@ -161,26 +161,26 @@ export default function GamesPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="max-w-4xl mx-auto mt-12 bg-white rounded-2xl shadow-lg p-8"
+          className="max-w-4xl mx-auto mt-8 md:mt-12 bg-white rounded-2xl shadow-lg p-6 md:p-8"
         >
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
             🏆 게임 통계
           </h2>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-3 md:gap-6">
             <div className="text-center">
-              <div className="text-4xl font-bold text-purple-600 mb-2">-</div>
-              <div className="text-gray-600">Match 최고 기록</div>
-              <div className="text-sm text-gray-400 mt-1">곧 제공</div>
+              <div className="text-2xl md:text-4xl font-bold text-purple-600 mb-1 md:mb-2">-</div>
+              <div className="text-gray-600 text-xs md:text-base">Match 최고 기록</div>
+              <div className="text-xs text-gray-400 mt-1 hidden md:block">곧 제공</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-blue-600 mb-2">-</div>
-              <div className="text-gray-600">True/False 정답률</div>
-              <div className="text-sm text-gray-400 mt-1">곧 제공</div>
+              <div className="text-2xl md:text-4xl font-bold text-blue-600 mb-1 md:mb-2">-</div>
+              <div className="text-gray-600 text-xs md:text-base">True/False 정답률</div>
+              <div className="text-xs text-gray-400 mt-1 hidden md:block">곧 제공</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-indigo-600 mb-2">-</div>
-              <div className="text-gray-600">Write 완료 횟수</div>
-              <div className="text-sm text-gray-400 mt-1">곧 제공</div>
+              <div className="text-2xl md:text-4xl font-bold text-indigo-600 mb-1 md:mb-2">-</div>
+              <div className="text-gray-600 text-xs md:text-base">Write 완료 횟수</div>
+              <div className="text-xs text-gray-400 mt-1 hidden md:block">곧 제공</div>
             </div>
           </div>
         </motion.div>

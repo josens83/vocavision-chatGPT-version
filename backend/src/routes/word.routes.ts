@@ -5,7 +5,14 @@ import {
   createWord,
   getRandomWords,
   getPublicWords,
-  getWordCountsByExam
+  getWordCountsByExam,
+  getLevelTestQuestions,
+  getQuizQuestions,
+  getWordVisuals,
+  updateWordVisuals,
+  deleteWordVisual,
+  importWordVisualsFromTemplate,
+  getWordWithVisuals,
 } from '../controllers/word.controller';
 import { authenticateToken, requireAdmin, optionalAuth } from '../middleware/auth.middleware';
 
@@ -154,6 +161,155 @@ router.get('/random', authenticateToken, getRandomWords);
 
 /**
  * @swagger
+ * /words/level-test-questions:
+ *   get:
+ *     summary: 레벨 테스트 문제 조회 (인증 불필요)
+ *     tags: [Words]
+ *     parameters:
+ *       - in: query
+ *         name: examCategory
+ *         schema:
+ *           type: string
+ *           enum: [CSAT, TEPS, TOEIC, TOEFL, SAT]
+ *         description: 시험 카테고리
+ *       - in: query
+ *         name: count
+ *         schema:
+ *           type: integer
+ *           default: 15
+ *         description: 문제 수 (최대 30)
+ *     responses:
+ *       200:
+ *         description: 레벨 테스트 문제 목록
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 questions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       word:
+ *                         type: string
+ *                       level:
+ *                         type: string
+ *                       options:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       correctAnswer:
+ *                         type: string
+ */
+router.get('/level-test-questions', getLevelTestQuestions);
+
+/**
+ * @swagger
+ * /words/quiz-questions:
+ *   get:
+ *     summary: 퀴즈 문제 조회 (인증 불필요)
+ *     tags: [Words]
+ *     parameters:
+ *       - in: query
+ *         name: examCategory
+ *         schema:
+ *           type: string
+ *           enum: [CSAT, TEPS, TOEIC, TOEFL, SAT]
+ *         description: 시험 카테고리
+ *       - in: query
+ *         name: level
+ *         schema:
+ *           type: string
+ *           enum: [L1, L2, L3]
+ *         description: 레벨 필터
+ *       - in: query
+ *         name: mode
+ *         schema:
+ *           type: string
+ *           enum: [eng-to-kor, kor-to-eng]
+ *           default: eng-to-kor
+ *         description: 퀴즈 모드
+ *       - in: query
+ *         name: count
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: 문제 수 (최대 50)
+ *     responses:
+ *       200:
+ *         description: 퀴즈 문제 목록
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 questions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       question:
+ *                         type: string
+ *                       options:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       correctAnswer:
+ *                         type: string
+ *                       mnemonic:
+ *                         type: string
+ */
+router.get('/quiz-questions', getQuizQuestions);
+
+/**
+ * @swagger
+ * /words/visuals/import:
+ *   post:
+ *     summary: JSON 템플릿에서 시각화 이미지 일괄 가져오기 (관리자 전용)
+ *     tags: [Word Visuals]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               templates:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     word:
+ *                       type: string
+ *                       description: 단어 이름
+ *                     visuals:
+ *                       type: object
+ *                       properties:
+ *                         concept:
+ *                           type: object
+ *                         mnemonic:
+ *                           type: object
+ *                         rhyme:
+ *                           type: object
+ *     responses:
+ *       200:
+ *         description: 가져오기 결과
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: 관리자 권한 필요
+ */
+router.post('/visuals/import', authenticateToken, requireAdmin, importWordVisualsFromTemplate);
+
+/**
+ * @swagger
  * /words/{id}:
  *   get:
  *     summary: 특정 단어 상세 조회
@@ -250,5 +406,156 @@ router.get('/:id', authenticateToken, getWordById);
  *         description: 관리자 권한 필요
  */
 router.post('/', authenticateToken, requireAdmin, createWord);
+
+// ============================================
+// 3-이미지 시각화 시스템 (Word Visuals) Routes
+// ============================================
+
+/**
+ * @swagger
+ * /words/{id}/visuals:
+ *   get:
+ *     summary: 단어 시각화 이미지 조회
+ *     tags: [Word Visuals]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 단어 ID
+ *     responses:
+ *       200:
+ *         description: 시각화 이미지 목록
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 visuals:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       type:
+ *                         type: string
+ *                         enum: [CONCEPT, MNEMONIC, RHYME]
+ *                       labelKo:
+ *                         type: string
+ *                       captionKo:
+ *                         type: string
+ *                       imageUrl:
+ *                         type: string
+ */
+router.get('/:id/visuals', getWordVisuals);
+
+/**
+ * @swagger
+ * /words/{id}/with-visuals:
+ *   get:
+ *     summary: 단어 상세 조회 (시각화 이미지 포함)
+ *     tags: [Word Visuals]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 단어 ID
+ *     responses:
+ *       200:
+ *         description: 단어 상세 정보 (시각화 이미지 포함)
+ *       404:
+ *         description: 단어를 찾을 수 없음
+ */
+router.get('/:id/with-visuals', getWordWithVisuals);
+
+/**
+ * @swagger
+ * /words/{id}/visuals:
+ *   put:
+ *     summary: 단어 시각화 이미지 업데이트 (관리자 전용)
+ *     tags: [Word Visuals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 단어 ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               visuals:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [CONCEPT, MNEMONIC, RHYME]
+ *                     labelKo:
+ *                       type: string
+ *                     captionEn:
+ *                       type: string
+ *                     captionKo:
+ *                       type: string
+ *                     imageUrl:
+ *                       type: string
+ *                     promptEn:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: 업데이트된 시각화 이미지
+ *       400:
+ *         description: 잘못된 요청
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: 관리자 권한 필요
+ */
+router.put('/:id/visuals', authenticateToken, requireAdmin, updateWordVisuals);
+
+/**
+ * @swagger
+ * /words/{id}/visuals/{type}:
+ *   delete:
+ *     summary: 특정 시각화 이미지 삭제 (관리자 전용)
+ *     tags: [Word Visuals]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 단어 ID
+ *       - in: path
+ *         name: type
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [CONCEPT, MNEMONIC, RHYME]
+ *         description: 시각화 타입
+ *     responses:
+ *       200:
+ *         description: 삭제 성공
+ *       400:
+ *         description: 잘못된 타입
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       403:
+ *         description: 관리자 권한 필요
+ */
+router.delete('/:id/visuals/:type', authenticateToken, requireAdmin, deleteWordVisual);
 
 export default router;

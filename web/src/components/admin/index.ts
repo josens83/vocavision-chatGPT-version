@@ -37,6 +37,10 @@ export {
   WordDetailView,
 } from './WordForms';
 
+// Word Image Upload Section (3-이미지 시각화)
+export { default as WordImageSection } from './WordImageSection';  // Legacy
+export { default as WordVisualsEditor } from './WordVisualsEditor'; // New
+
 // Main Dashboard
 export { AdminDashboard } from './AdminDashboard';
 
@@ -64,4 +68,12 @@ export {
   STATUS_LABELS,
   STATUS_COLORS,
   LEVEL_COLORS,
+  VISUAL_TYPE_CONFIG,
+} from './types/admin.types';
+
+export type {
+  VisualType,
+  WordVisual,
+  WordVisualInput,
+  VisualTemplate,
 } from './types/admin.types';

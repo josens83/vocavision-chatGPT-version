@@ -17,6 +17,8 @@ import {
   ReviewForm,
   EXAM_LEVEL_OPTIONS,
   LEVEL_TO_DB,
+  WordVisual,
+  WordVisualInput,
 } from '../types/admin.types';
 
 // Generation progress type for AI content generation
@@ -227,10 +229,22 @@ export function useWordMutations() {
       setError(null);
       try {
         // Map frontend level to DB level if provided
-        const payload = { ...data };
-        if (data.level) {
-          payload.level = LEVEL_TO_DB[data.level] as any;
+        // Also convert examCategories (array) to examCategory (single) for backend
+        const payload: Record<string, unknown> = {};
+
+        if (data.word) payload.word = data.word;
+        if (data.topics) payload.tags = data.topics; // topics -> tags for backend
+
+        // Convert examCategories array to single examCategory
+        if (data.examCategories && data.examCategories.length > 0) {
+          payload.examCategory = data.examCategories[0];
         }
+
+        // Convert frontend level to DB level
+        if (data.level) {
+          payload.level = LEVEL_TO_DB[data.level];
+        }
+
         const result = await apiClient<{ word: VocaWord }>(
           `/admin/words/${wordId}`,
           {
@@ -749,6 +763,110 @@ export function useAuditLogs() {
   }, []);
 
   return { logs, loading, error, fetchAuditLogs, clearLogs };
+}
+
+// ============================================
+// useContentUpdate Hook - 연상법/예문 직접 편집
+// ============================================
+
+export interface ContentUpdateData {
+  mnemonic?: string;
+  mnemonicKorean?: string;
+  funnyExamples?: Array<{
+    sentenceEn: string;
+    sentenceKo?: string;
+    isFunny?: boolean;
+  }>;
+}
+
+export function useContentUpdate() {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updateContent = useCallback(
+    async (wordId: string, data: ContentUpdateData): Promise<boolean> => {
+      setSaving(true);
+      setError(null);
+      try {
+        await apiClient(`/admin/words/${wordId}/content`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        });
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update content');
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    []
+  );
+
+  return { updateContent, saving, error };
+}
+
+// ============================================
+// useVisuals Hook - Word Visual 3-Image System
+// ============================================
+
+export function useVisuals() {
+  const [visuals, setVisuals] = useState<WordVisual[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchVisuals = useCallback(async (wordId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Use admin route for admin key authentication
+      const data = await apiClient<{ visuals: WordVisual[] }>(
+        `/admin/words/${wordId}/visuals`
+      );
+      setVisuals(data.visuals || []);
+    } catch (err) {
+      // If 404 or no visuals, just set empty array
+      setVisuals([]);
+      // Only set error for non-404 errors
+      if (err instanceof Error && !err.message.includes('404')) {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const saveVisuals = useCallback(
+    async (wordId: string, visualsData: WordVisualInput[]): Promise<boolean> => {
+      setSaving(true);
+      setError(null);
+      try {
+        // Use admin route for admin key authentication
+        const data = await apiClient<{ visuals: WordVisual[] }>(
+          `/admin/words/${wordId}/visuals`,
+          {
+            method: 'PUT',
+            body: JSON.stringify({ visuals: visualsData }),
+          }
+        );
+        setVisuals(data.visuals || []);
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save visuals');
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    []
+  );
+
+  const clearVisuals = useCallback(() => {
+    setVisuals([]);
+  }, []);
+
+  return { visuals, loading, saving, error, fetchVisuals, saveVisuals, clearVisuals };
 }
 
 // ============================================

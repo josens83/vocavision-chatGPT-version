@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmModal';
+import { EmptyNotifications } from '@/components/ui/EmptyState';
+import { SkeletonListItem } from '@/components/ui/Skeleton';
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -28,6 +32,8 @@ interface NotificationPreferences {
 export default function NotificationsPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
@@ -128,7 +134,15 @@ export default function NotificationsPage() {
   };
 
   const clearAllNotifications = async () => {
-    if (!confirm('모든 알림을 삭제하시겠습니까?')) return;
+    const confirmed = await confirm({
+      title: '모든 알림 삭제',
+      message: '모든 알림을 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.',
+      confirmText: '모두 삭제',
+      cancelText: '취소',
+      type: 'danger',
+    });
+
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem('authToken');
@@ -138,8 +152,10 @@ export default function NotificationsPage() {
 
       setNotifications([]);
       setUnreadCount(0);
+      toast.success('알림 삭제 완료', '모든 알림이 삭제되었습니다');
     } catch (error) {
       console.error('Failed to clear notifications:', error);
+      toast.error('알림 삭제 실패', '다시 시도해주세요');
     }
   };
 
@@ -201,8 +217,31 @@ export default function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">로딩 중...</div>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+                  ← 대시보드
+                </Link>
+                <h1 className="text-2xl font-bold text-blue-600">알림</h1>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="flex gap-2 mb-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse" />
+            ))}
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <SkeletonListItem key={i} />
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -286,15 +325,9 @@ export default function NotificationsPage() {
             {/* Notifications List */}
             <div className="space-y-3">
               {filteredNotifications.length === 0 ? (
-                <div className="bg-white rounded-2xl p-12 text-center">
-                  <div className="text-6xl mb-4">🔔</div>
-                  <h3 className="text-2xl font-bold mb-2">알림이 없습니다</h3>
-                  <p className="text-gray-600">
-                    {activeTab === 'unread'
-                      ? '읽지 않은 알림이 없습니다'
-                      : '새로운 알림이 도착하면 여기에 표시됩니다'}
-                  </p>
-                </div>
+                <EmptyNotifications
+                  message={activeTab === 'unread' ? '읽지 않은 알림이 없습니다' : undefined}
+                />
               ) : (
                 filteredNotifications.map((notification) => (
                   <div
