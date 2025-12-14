@@ -202,7 +202,12 @@ export function generateConceptPrompt(definitionEn: string, word: string): strin
 }
 
 export function generateMnemonicPrompt(mnemonic: string, word: string): string {
-  return `A 1:1 square cartoon illustration visualizing: ${mnemonic || word}. Style: cute cartoon, memorable, colorful. CRITICAL: NO text in image.`;
+  // If mnemonic is just the word itself or empty, create a more descriptive prompt
+  if (!mnemonic || mnemonic === word || mnemonic.length < 5) {
+    return `A 1:1 square cartoon illustration showing the action or concept of "${word}" in a funny, exaggerated, memorable way. The image should help students remember this vocabulary word. Style: cute cartoon, bright colors, humorous, memorable, dynamic poses or expressions. CRITICAL: Absolutely NO text, NO letters, NO words in the image.`;
+  }
+
+  return `A 1:1 square cartoon illustration visualizing this memory technique: "${mnemonic}". This helps remember the English word "${word}". Style: cute cartoon, memorable, colorful, exaggerated for humor. CRITICAL: Absolutely NO text, NO letters, NO words in the image.`;
 }
 
 export function generateRhymePrompt(definitionEn: string, word: string): string {
