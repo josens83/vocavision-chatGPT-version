@@ -1,19 +1,18 @@
 /**
  * Admin Batch Image Generation API
  *
- * POST /api/admin/batch-generate-images
- * Generates images for multiple words using Stability AI + Claude API
+ * Uses backend database for job persistence (solves serverless memory issue)
+ *
+ * POST /api/admin/batch-generate-images - Create job & start processing
+ * GET /api/admin/batch-generate-images?jobId=xxx - Get job status
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 
 // Configuration
 const STABILITY_API_KEY = process.env.STABILITY_API_KEY || '';
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '';
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '';
-const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
 
 interface WordData {
   id: string;
@@ -33,25 +32,6 @@ interface BatchGenerateRequest {
   };
 }
 
-// In-memory job store (in production, use Redis or a database)
-const jobs: Map<string, {
-  id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  totalWords: number;
-  processedWords: number;
-  currentWord?: string;
-  currentType?: string;
-  results: Array<{
-    wordId: string;
-    word: string;
-    success: boolean;
-    imagesGenerated: number;
-    error?: string;
-  }>;
-  startedAt: string;
-  completedAt?: string;
-}> = new Map();
-
 /**
  * Fetch word data from backend
  */
@@ -60,7 +40,7 @@ async function fetchWordData(wordId: string): Promise<WordData | null> {
     const response = await fetch(`${API_BASE}/admin/words/${wordId}`, {
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || '',
+        'x-admin-key': ADMIN_KEY,
       },
     });
 
@@ -155,7 +135,7 @@ async function saveVisuals(wordId: string, visuals: Array<{
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_KEY || '',
+        'x-admin-key': ADMIN_KEY,
       },
       body: JSON.stringify({ visuals }),
     });
@@ -167,16 +147,49 @@ async function saveVisuals(wordId: string, visuals: Array<{
 }
 
 /**
+ * Update job in backend database
+ */
+async function updateJobInDB(jobId: string, updateData: {
+  status?: string;
+  progress?: number;
+  result?: Record<string, unknown>;
+  error?: string;
+}): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/admin/image-jobs/${jobId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': ADMIN_KEY,
+      },
+      body: JSON.stringify(updateData),
+    });
+  } catch (error) {
+    console.error('Failed to update job:', error);
+  }
+}
+
+/**
  * Process a single word
  */
 async function processWord(
   wordData: WordData,
   types: ('CONCEPT' | 'MNEMONIC' | 'RHYME')[],
-  jobId: string
+  jobId: string,
+  currentJobResult: {
+    processedWords: number;
+    totalWords: number;
+    currentWord?: string;
+    currentType?: string;
+    results: Array<{
+      wordId: string;
+      word: string;
+      success: boolean;
+      imagesGenerated: number;
+      error?: string;
+    }>;
+  }
 ): Promise<{ success: boolean; imagesGenerated: number; error?: string }> {
-  const job = jobs.get(jobId);
-  if (!job) return { success: false, imagesGenerated: 0, error: 'Job not found' };
-
   const generatedVisuals: Array<{
     type: string;
     imageUrl: string;
@@ -193,8 +206,8 @@ async function processWord(
 
   for (const type of types) {
     // Update job status
-    job.currentType = type;
-    jobs.set(jobId, job);
+    currentJobResult.currentType = type;
+    await updateJobInDB(jobId, { result: currentJobResult });
 
     let prompt: string;
     let captionKo: string;
@@ -263,13 +276,28 @@ async function processWord(
  * Background job processor
  */
 async function processJob(jobId: string, wordIds: string[], options: BatchGenerateRequest['options']) {
-  const job = jobs.get(jobId);
-  if (!job) return;
-
-  job.status = 'processing';
-  jobs.set(jobId, job);
-
   const types = options?.types || ['CONCEPT', 'MNEMONIC', 'RHYME'];
+
+  const jobResult = {
+    totalWords: wordIds.length,
+    processedWords: 0,
+    currentWord: undefined as string | undefined,
+    currentType: undefined as string | undefined,
+    results: [] as Array<{
+      wordId: string;
+      word: string;
+      success: boolean;
+      imagesGenerated: number;
+      error?: string;
+    }>,
+  };
+
+  // Update job status to processing
+  await updateJobInDB(jobId, {
+    status: 'processing',
+    progress: 0,
+    result: jobResult,
+  });
 
   for (let i = 0; i < wordIds.length; i++) {
     const wordId = wordIds[i];
@@ -277,40 +305,47 @@ async function processJob(jobId: string, wordIds: string[], options: BatchGenera
     // Fetch word data
     const wordData = await fetchWordData(wordId);
     if (!wordData) {
-      job.results.push({
+      jobResult.results.push({
         wordId,
         word: 'Unknown',
         success: false,
         imagesGenerated: 0,
         error: 'Failed to fetch word data',
       });
-      job.processedWords++;
-      jobs.set(jobId, job);
+      jobResult.processedWords++;
+
+      const progress = Math.round((jobResult.processedWords / jobResult.totalWords) * 100);
+      await updateJobInDB(jobId, { progress, result: jobResult });
       continue;
     }
 
-    job.currentWord = wordData.word;
-    jobs.set(jobId, job);
+    jobResult.currentWord = wordData.word;
+    await updateJobInDB(jobId, { result: jobResult });
 
     // Process word
-    const result = await processWord(wordData, types, jobId);
+    const result = await processWord(wordData, types, jobId, jobResult);
 
-    job.results.push({
+    jobResult.results.push({
       wordId: wordData.id,
       word: wordData.word,
       success: result.success,
       imagesGenerated: result.imagesGenerated,
       error: result.error,
     });
-    job.processedWords++;
-    jobs.set(jobId, job);
+    jobResult.processedWords++;
+
+    const progress = Math.round((jobResult.processedWords / jobResult.totalWords) * 100);
+    await updateJobInDB(jobId, { progress, result: jobResult });
   }
 
-  job.status = 'completed';
-  job.completedAt = new Date().toISOString();
-  job.currentWord = undefined;
-  job.currentType = undefined;
-  jobs.set(jobId, job);
+  // Mark job as completed
+  jobResult.currentWord = undefined;
+  jobResult.currentType = undefined;
+  await updateJobInDB(jobId, {
+    status: 'completed',
+    progress: 100,
+    result: jobResult,
+  });
 }
 
 /**
@@ -343,32 +378,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create job
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const job = {
-      id: jobId,
-      status: 'pending' as const,
-      totalWords: wordIds.length,
-      processedWords: 0,
-      results: [],
-      startedAt: new Date().toISOString(),
-    };
+    // Create job in backend database
+    const createResponse = await fetch(`${API_BASE}/admin/image-jobs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': ADMIN_KEY,
+      },
+      body: JSON.stringify({ wordIds, types: options?.types }),
+    });
 
-    jobs.set(jobId, job);
+    if (!createResponse.ok) {
+      const errorData = await createResponse.json();
+      return NextResponse.json(
+        { success: false, error: errorData.message || 'Failed to create job' },
+        { status: 500 }
+      );
+    }
+
+    const createResult = await createResponse.json();
+    const jobId = createResult.data?.jobId;
+
+    if (!jobId) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to get job ID' },
+        { status: 500 }
+      );
+    }
 
     // Start processing in background (don't await)
-    processJob(jobId, wordIds, options).catch(console.error);
-
-    // Estimate time (roughly 10 seconds per image, 3 images per word)
-    const estimatedMinutes = Math.ceil((wordIds.length * 3 * 10) / 60);
+    processJob(jobId, wordIds, options).catch(async (error) => {
+      console.error('Job processing error:', error);
+      await updateJobInDB(jobId, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    });
 
     return NextResponse.json({
       success: true,
-      data: {
-        jobId,
-        totalWords: wordIds.length,
-        estimatedTime: `약 ${estimatedMinutes}분`,
-      },
+      data: createResult.data,
     });
   } catch (error) {
     console.error('[Batch Image Gen] Error:', error);
@@ -383,7 +432,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET handler - Get job status
+ * GET handler - Get job status from backend database
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -396,17 +445,30 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const job = jobs.get(jobId);
+  try {
+    // Fetch job status from backend database
+    const response = await fetch(`${API_BASE}/admin/image-jobs/${jobId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-key': ADMIN_KEY,
+      },
+    });
 
-  if (!job) {
+    if (!response.ok) {
+      const errorData = await response.json();
+      return NextResponse.json(
+        { success: false, error: errorData.error || 'Job not found' },
+        { status: response.status }
+      );
+    }
+
+    const result = await response.json();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('[Batch Image Gen] Error fetching job:', error);
     return NextResponse.json(
-      { success: false, error: 'Job not found' },
-      { status: 404 }
+      { success: false, error: 'Failed to fetch job status' },
+      { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    success: true,
-    data: job,
-  });
 }
