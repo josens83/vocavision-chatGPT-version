@@ -15,6 +15,7 @@ import {
   VisualType,
   checkImageServiceConfig,
 } from '../services/imageGenerator.service';
+import { generateRhymeCaptions } from '../services/smartCaption.service';
 
 // ============================================
 // Dashboard Stats
@@ -964,18 +965,42 @@ async function processImageGenerationJob(jobId: string, wordIds: string[], types
                 captionKo = definitionKo || `${word.word}의 의미`;
                 captionEn = definitionEn || `The meaning of ${word.word}`;
                 break;
-              case 'MNEMONIC':
+              case 'MNEMONIC': {
+                logger.info('[ImageJob] MNEMONIC data:', {
+                  word: word.word,
+                  hasMnemonic: !!mnemonic,
+                  mnemonicLength: mnemonic?.length || 0,
+                  mnemonicPreview: mnemonic?.substring(0, 100),
+                  hasMnemonicKorean: !!mnemonicKorean,
+                });
                 prompt = generateMnemonicPrompt(mnemonic || word.word, word.word);
+                logger.info('[ImageJob] MNEMONIC prompt:', prompt.substring(0, 200));
                 captionKo = mnemonicKorean || `${word.word} 연상법`;
                 captionEn = mnemonic?.substring(0, 50) || `Memory tip for ${word.word}`;
                 break;
+              }
               case 'RHYME': {
                 prompt = generateRhymePrompt(definitionEn || word.word, word.word);
-                const rhymes = (rhymingWords || []).slice(0, 3).join(', ');
-                captionKo = rhymes ? `${word.word}는 ${rhymes}와 라임!` : definitionKo || '';
-                captionEn = rhymes ? `${word.word} rhymes with ${rhymes}` : definitionEn || '';
+
+                // Use Claude API for creative captions
+                const rhymes = rhymingWords || [];
+                logger.info('[ImageJob] RHYME data:', {
+                  word: word.word,
+                  rhymingWordsCount: rhymes.length,
+                  rhymingWords: rhymes.slice(0, 5),
+                });
+
+                const captions = await generateRhymeCaptions(
+                  word.word,
+                  definitionEn || '',
+                  rhymes
+                );
+                captionKo = captions.captionKo;
+                captionEn = captions.captionEn;
+
+                logger.info('[ImageJob] RHYME captions:', { captionKo, captionEn });
                 break;
-            }
+              }
             }
 
             // Generate and upload image
