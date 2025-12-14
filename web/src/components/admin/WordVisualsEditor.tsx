@@ -42,7 +42,7 @@ interface WordVisualsEditorProps {
   onChange: (visuals: WordVisualInput[]) => void;
   cloudinaryCloudName?: string;
   onJsonImport?: (template: VisualTemplate) => void;
-  onImageDelete?: (visual: WordVisualInput) => void;
+  onImageDelete?: (type: string, updatedVisuals: WordVisualInput[]) => void | Promise<void>;
   wordData?: {
     definitionEn?: string;
     definitionKo?: string;
