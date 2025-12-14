@@ -49,7 +49,7 @@ import {
   ContentUpdateData,
 } from './hooks/useAdminApi';
 import WordVisualsEditor from './WordVisualsEditor';
-import { WordVisualInput } from './types/admin.types';
+import { WordVisualInput, WordVisual } from './types/admin.types';
 
 // ---------------------------------------------
 // Word Form Modal
@@ -1936,7 +1936,7 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, c
                   <WordVisualsEditor
                     wordId={word.id}
                     word={word.word}
-                    visuals={localVisuals}
+                    visuals={localVisuals as WordVisual[]}
                     onChange={handleVisualsChange}
                     onImageDelete={handleImageDelete}
                     cloudinaryCloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
@@ -2139,7 +2139,7 @@ ${JSON.stringify({ word: word.word, level: word.level, examCategories, topics, c
                   <WordVisualsEditor
                     wordId={word.id}
                     word={word.word}
-                    visuals={localVisuals}
+                    visuals={localVisuals as WordVisual[]}
                     onChange={handleVisualsChange}
                     onImageDelete={handleImageDelete}
                     cloudinaryCloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
