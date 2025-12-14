@@ -1476,8 +1476,7 @@ async function runContinuousImageGeneration(
         where: whereClause,
         include: {
           visuals: { select: { type: true } },
-          mnemonic: true,
-          rhymeInfo: true,
+          mnemonics: { take: 1, orderBy: { rating: 'desc' } },
         },
         orderBy: { frequency: 'desc' }, // High frequency first
         take: 10, // Get a batch to check
@@ -1529,8 +1528,7 @@ async function runContinuousImageGeneration(
           },
           include: {
             visuals: { select: { type: true } },
-            mnemonic: true,
-            rhymeInfo: true,
+            mnemonics: { take: 1, orderBy: { rating: 'desc' } },
           },
           orderBy: { frequency: 'desc' },
         });
@@ -1572,14 +1570,17 @@ async function runContinuousImageGeneration(
             captionKo = currentWord.definitionKo || currentWord.definition || '';
             captionEn = currentWord.definition || '';
           } else if (visualType === 'MNEMONIC') {
-            const mnemonic = currentWord.mnemonic;
-            if (mnemonic) {
+            const firstMnemonic = currentWord.mnemonics?.[0];
+            const mnemonicContent = firstMnemonic?.content;
+            const mnemonicKorean = firstMnemonic?.koreanHint;
+
+            if (mnemonicContent) {
               // Use Claude to extract a scene for better image quality
               const sceneResult = await extractMnemonicScene(
                 currentWord.word,
                 currentWord.definition || '',
-                mnemonic.mnemonic || currentWord.word,
-                mnemonic.mnemonicKorean || ''
+                mnemonicContent,
+                mnemonicKorean || ''
               );
               prompt = sceneResult.prompt;
               captionKo = sceneResult.captionKo;
@@ -1591,8 +1592,7 @@ async function runContinuousImageGeneration(
             }
           } else {
             // RHYME
-            const rhymeInfo = currentWord.rhymeInfo;
-            const rhymingWords = (rhymeInfo?.rhymingWords || []) as string[];
+            const rhymingWords = (currentWord.rhymingWords || []) as string[];
 
             if (rhymingWords.length > 0) {
               const rhymeResult = await generateRhymeScene(
@@ -1627,9 +1627,7 @@ async function runContinuousImageGeneration(
                 wordId: currentWord.id,
                 type: visualType,
                 imageUrl: result.imageUrl,
-                cloudinaryPublicId: result.publicId,
-                prompt,
-                seed: result.seed,
+                promptEn: prompt,
                 captionKo,
                 captionEn,
               },
