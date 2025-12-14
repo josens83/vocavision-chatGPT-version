@@ -834,6 +834,190 @@ export const getBatchJobs = async (
 };
 
 // ============================================
+// Image Generation Jobs
+// ============================================
+
+/**
+ * Create a new image generation job
+ */
+export const createImageGenJob = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { wordIds, types = ['CONCEPT', 'MNEMONIC', 'RHYME'] } = req.body;
+
+    if (!wordIds || !Array.isArray(wordIds) || wordIds.length === 0) {
+      return res.status(400).json({ message: 'wordIds array is required' });
+    }
+
+    if (wordIds.length > 50) {
+      return res.status(400).json({ message: 'Maximum 50 words per batch' });
+    }
+
+    // Create job in database
+    const job = await prisma.contentGenerationJob.create({
+      data: {
+        batchId: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        inputWords: wordIds,
+        generateFields: types,
+        status: 'pending',
+        progress: 0,
+        result: {
+          totalWords: wordIds.length,
+          processedWords: 0,
+          currentWord: null,
+          currentType: null,
+          results: [],
+        },
+      },
+    });
+
+    // Estimate time (roughly 10 seconds per image, 3 images per word)
+    const estimatedMinutes = Math.ceil((wordIds.length * types.length * 10) / 60);
+
+    res.json({
+      success: true,
+      data: {
+        jobId: job.id,
+        batchId: job.batchId,
+        totalWords: wordIds.length,
+        estimatedTime: `약 ${estimatedMinutes}분`,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get image generation job status
+ */
+export const getImageGenJob = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = await prisma.contentGenerationJob.findFirst({
+      where: {
+        OR: [
+          { id: jobId },
+          { batchId: jobId },
+        ],
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    const result = job.result as {
+      totalWords?: number;
+      processedWords?: number;
+      currentWord?: string;
+      currentType?: string;
+      results?: Array<{
+        wordId: string;
+        word: string;
+        success: boolean;
+        imagesGenerated: number;
+        error?: string;
+      }>;
+    } | null;
+
+    res.json({
+      success: true,
+      data: {
+        id: job.id,
+        batchId: job.batchId,
+        status: job.status,
+        progress: job.progress,
+        totalWords: result?.totalWords || job.inputWords.length,
+        processedWords: result?.processedWords || 0,
+        currentWord: result?.currentWord,
+        currentType: result?.currentType,
+        results: result?.results || [],
+        error: job.errorMessage,
+        startedAt: job.startedAt,
+        completedAt: job.completedAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update image generation job progress
+ */
+export const updateImageGenJob = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { jobId } = req.params;
+    const { status, progress, currentWord, currentType, result: resultUpdate, error } = req.body;
+
+    const job = await prisma.contentGenerationJob.findFirst({
+      where: {
+        OR: [
+          { id: jobId },
+          { batchId: jobId },
+        ],
+      },
+    });
+
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Job not found' });
+    }
+
+    const currentResult = job.result as Record<string, unknown> | null;
+    const updatedResult = {
+      ...currentResult,
+      ...resultUpdate,
+    };
+
+    const updateData: Record<string, unknown> = {};
+
+    if (status !== undefined) {
+      updateData.status = status;
+      if (status === 'processing' && !job.startedAt) {
+        updateData.startedAt = new Date();
+      }
+      if (status === 'completed' || status === 'failed') {
+        updateData.completedAt = new Date();
+      }
+    }
+
+    if (progress !== undefined) {
+      updateData.progress = progress;
+    }
+
+    if (resultUpdate !== undefined) {
+      updateData.result = updatedResult;
+    }
+
+    if (error !== undefined) {
+      updateData.errorMessage = error;
+    }
+
+    const updated = await prisma.contentGenerationJob.update({
+      where: { id: job.id },
+      data: updateData,
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ============================================
 // Collection (단어장) Management
 // ============================================
 
