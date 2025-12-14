@@ -9,6 +9,17 @@ import {
 import { CSAT_L1_WORDS, CSAT_L2_WORDS, CSAT_L3_WORDS } from '../data/csat-words';
 import { processGenerationJob } from '../services/contentGenerator.service';
 import logger from '../utils/logger';
+import {
+  generateAndUploadImage,
+  generateConceptPrompt,
+  generateMnemonicPrompt,
+  generateRhymePrompt,
+  VisualType,
+} from '../services/imageGenerator.service';
+import {
+  extractMnemonicScene,
+  generateRhymeScene,
+} from '../services/smartCaption.service';
 
 const router = Router();
 
@@ -1228,5 +1239,440 @@ router.post('/seed-exam', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to seed exam', details: String(error) });
   }
 });
+
+// ============================================
+// Continuous Image Generation
+// ============================================
+
+// Track active continuous image generation sessions
+const activeImageSessions: Map<string, {
+  isRunning: boolean;
+  batchesCompleted: number;
+  imagesGenerated: number;
+  wordsProcessed: number;
+  errors: string[];
+  startedAt: Date;
+  lastBatchAt: Date | null;
+  level?: string;
+  examCategory?: string;
+  types: VisualType[];
+  skipExisting: boolean;
+}> = new Map();
+
+/**
+ * GET /internal/generate-images-continuous?key=YOUR_SECRET&level=L1&examCategory=CSAT
+ * 자동 연속 이미지 생성 (CONCEPT, MNEMONIC, RHYME 전부)
+ * - level: L1, L2, L3 필터 (선택사항)
+ * - examCategory: CSAT, TEPS, TOEFL 등 (선택사항)
+ * - types: CONCEPT,MNEMONIC,RHYME (쉼표 구분, 선택사항)
+ * - skipExisting: true/false (기존 이미지 스킵, 기본값 true)
+ */
+router.get('/generate-images-continuous', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
+      return res.status(403).json({ error: 'Forbidden: Invalid key' });
+    }
+
+    const level = req.query.level as string;
+    const examCategory = req.query.examCategory as string;
+    const typesParam = req.query.types as string;
+    const skipExisting = req.query.skipExisting !== 'false'; // Default true
+
+    // Parse visual types
+    const types: VisualType[] = typesParam
+      ? (typesParam.split(',').filter(t => ['CONCEPT', 'MNEMONIC', 'RHYME'].includes(t)) as VisualType[])
+      : ['CONCEPT', 'MNEMONIC', 'RHYME'];
+
+    // Check if there's already an image generation session running
+    const existingSession = Array.from(activeImageSessions.entries())
+      .find(([_, session]) => session.isRunning);
+
+    if (existingSession) {
+      return res.json({
+        message: 'Image generation already running',
+        sessionId: existingSession[0],
+        session: existingSession[1],
+      });
+    }
+
+    // Create session ID
+    const sessionId = `image-${Date.now()}`;
+
+    // Initialize session
+    activeImageSessions.set(sessionId, {
+      isRunning: true,
+      batchesCompleted: 0,
+      imagesGenerated: 0,
+      wordsProcessed: 0,
+      errors: [],
+      startedAt: new Date(),
+      lastBatchAt: null,
+      level,
+      examCategory,
+      types,
+      skipExisting,
+    });
+
+    // Start the continuous image generation process
+    runContinuousImageGeneration(sessionId, level, examCategory, types, skipExisting);
+
+    logger.info(`[Internal/ImageGen] Started session ${sessionId}: level=${level || 'all'}, examCategory=${examCategory || 'all'}, types=${types.join(',')}, skipExisting=${skipExisting}`);
+
+    res.json({
+      message: 'Continuous image generation started',
+      sessionId,
+      config: {
+        level: level || 'all',
+        examCategory: examCategory || 'all',
+        types,
+        skipExisting,
+      },
+    });
+  } catch (error) {
+    console.error('[Internal/ImageGen] Error:', error);
+    res.status(500).json({ error: 'Failed to start image generation', details: String(error) });
+  }
+});
+
+/**
+ * GET /internal/image-generation-status?key=YOUR_SECRET
+ * 이미지 생성 세션 상태 확인
+ */
+router.get('/image-generation-status', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
+      return res.status(403).json({ error: 'Forbidden: Invalid key' });
+    }
+
+    const sessions = Array.from(activeImageSessions.entries()).map(([id, session]) => ({
+      sessionId: id,
+      ...session,
+      runningTime: session.isRunning
+        ? Math.round((Date.now() - session.startedAt.getTime()) / 1000) + 's'
+        : null,
+    }));
+
+    // Get image stats from database
+    const [totalVisuals, visualsByType] = await Promise.all([
+      prisma.wordVisual.count(),
+      prisma.wordVisual.groupBy({
+        by: ['type'],
+        _count: { type: true },
+      }),
+    ]);
+
+    // Get words that need images (PUBLISHED + PENDING_REVIEW with aiGeneratedAt)
+    const wordsWithContent = await prisma.word.count({
+      where: {
+        aiGeneratedAt: { not: null },
+        status: { in: ['PUBLISHED', 'PENDING_REVIEW'] },
+      },
+    });
+
+    // Get words that have all 3 image types
+    const wordsWithAllImages = await prisma.word.count({
+      where: {
+        aiGeneratedAt: { not: null },
+        visuals: {
+          some: { type: 'CONCEPT' },
+        },
+        AND: [
+          { visuals: { some: { type: 'MNEMONIC' } } },
+          { visuals: { some: { type: 'RHYME' } } },
+        ],
+      },
+    });
+
+    res.json({
+      activeSessions: sessions.filter(s => s.isRunning),
+      completedSessions: sessions.filter(s => !s.isRunning).slice(-5),
+      imageStats: {
+        totalVisuals,
+        byType: visualsByType.reduce((acc, v) => {
+          acc[v.type] = v._count.type;
+          return acc;
+        }, {} as Record<string, number>),
+        wordsWithContent,
+        wordsWithAllImages,
+        wordsNeedingImages: wordsWithContent - wordsWithAllImages,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Internal/ImageGenStatus] Error:', error);
+    res.status(500).json({ error: 'Status check failed' });
+  }
+});
+
+/**
+ * GET /internal/stop-image-generation?key=YOUR_SECRET&sessionId=xxx
+ * 이미지 생성 중지
+ */
+router.get('/stop-image-generation', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
+      return res.status(403).json({ error: 'Forbidden: Invalid key' });
+    }
+
+    const sessionId = req.query.sessionId as string;
+
+    if (sessionId) {
+      const session = activeImageSessions.get(sessionId);
+      if (session) {
+        session.isRunning = false;
+        return res.json({ message: `Session ${sessionId} stopped`, session });
+      }
+      return res.status(404).json({ error: 'Session not found' });
+    }
+
+    // Stop all sessions
+    let stoppedCount = 0;
+    activeImageSessions.forEach((session) => {
+      if (session.isRunning) {
+        session.isRunning = false;
+        stoppedCount++;
+      }
+    });
+
+    res.json({ message: `Stopped ${stoppedCount} image generation sessions` });
+  } catch (error) {
+    console.error('[Internal/StopImageGen] Error:', error);
+    res.status(500).json({ error: 'Failed to stop' });
+  }
+});
+
+// Helper function to run continuous image generation
+async function runContinuousImageGeneration(
+  sessionId: string,
+  level?: string,
+  examCategory?: string,
+  types: VisualType[] = ['CONCEPT', 'MNEMONIC', 'RHYME'],
+  skipExisting: boolean = true
+): Promise<void> {
+  const session = activeImageSessions.get(sessionId);
+  if (!session) return;
+
+  // Process words one at a time to avoid rate limits
+  while (session.isRunning) {
+    try {
+      // Build where clause for words that have AI content
+      const whereClause: any = {
+        aiGeneratedAt: { not: null },
+        status: { in: ['PUBLISHED', 'PENDING_REVIEW'] },
+      };
+
+      if (level && ['L1', 'L2', 'L3'].includes(level)) {
+        whereClause.level = level;
+      }
+      if (examCategory) {
+        whereClause.examCategory = examCategory as any;
+      }
+
+      // Find next word that needs images
+      const words = await prisma.word.findMany({
+        where: whereClause,
+        include: {
+          visuals: { select: { type: true } },
+          mnemonic: true,
+          rhymeInfo: true,
+        },
+        orderBy: { frequency: 'desc' }, // High frequency first
+        take: 10, // Get a batch to check
+      });
+
+      // Find the first word that needs at least one image type
+      let wordToProcess: typeof words[number] | null = null;
+      let typesToGenerate: VisualType[] = [];
+
+      for (const word of words) {
+        const existingTypes = new Set(word.visuals.map(v => v.type));
+        const missingTypes = types.filter(t => !existingTypes.has(t));
+
+        if (missingTypes.length > 0) {
+          wordToProcess = word;
+          typesToGenerate = skipExisting ? missingTypes : types;
+          break;
+        }
+      }
+
+      if (!wordToProcess) {
+        // Try to find more words
+        const totalRemaining = await prisma.word.count({
+          where: {
+            ...whereClause,
+            visuals: {
+              none: {
+                type: { in: types },
+              },
+            },
+          },
+        });
+
+        if (totalRemaining === 0) {
+          logger.info(`[Internal/ImageGen] Session ${sessionId}: No more words need images`);
+          session.isRunning = false;
+          break;
+        }
+
+        // Find word without any required images
+        const wordWithoutImages = await prisma.word.findFirst({
+          where: {
+            ...whereClause,
+            visuals: {
+              none: {
+                type: { in: types },
+              },
+            },
+          },
+          include: {
+            visuals: { select: { type: true } },
+            mnemonic: true,
+            rhymeInfo: true,
+          },
+          orderBy: { frequency: 'desc' },
+        });
+
+        if (!wordWithoutImages) {
+          logger.info(`[Internal/ImageGen] Session ${sessionId}: All images generated`);
+          session.isRunning = false;
+          break;
+        }
+
+        wordToProcess = wordWithoutImages;
+        const existingTypes = new Set(wordWithoutImages.visuals.map(v => v.type));
+        typesToGenerate = skipExisting
+          ? types.filter(t => !existingTypes.has(t))
+          : types;
+      }
+
+      // Ensure we have a word to process
+      if (!wordToProcess) {
+        logger.info(`[Internal/ImageGen] Session ${sessionId}: No word found to process`);
+        session.isRunning = false;
+        break;
+      }
+
+      const currentWord = wordToProcess; // TypeScript guard
+      logger.info(`[Internal/ImageGen] Session ${sessionId}: Processing "${currentWord.word}" - types: ${typesToGenerate.join(', ')}`);
+
+      // Generate images for each type
+      for (const visualType of typesToGenerate) {
+        if (!session.isRunning) break;
+
+        try {
+          let prompt: string;
+          let captionKo: string;
+          let captionEn: string;
+
+          if (visualType === 'CONCEPT') {
+            prompt = generateConceptPrompt(currentWord.definition || '', currentWord.word);
+            captionKo = currentWord.definitionKo || currentWord.definition || '';
+            captionEn = currentWord.definition || '';
+          } else if (visualType === 'MNEMONIC') {
+            const mnemonic = currentWord.mnemonic;
+            if (mnemonic) {
+              // Use Claude to extract a scene for better image quality
+              const sceneResult = await extractMnemonicScene(
+                currentWord.word,
+                currentWord.definition || '',
+                mnemonic.mnemonic || currentWord.word,
+                mnemonic.mnemonicKorean || ''
+              );
+              prompt = sceneResult.prompt;
+              captionKo = sceneResult.captionKo;
+              captionEn = sceneResult.captionEn;
+            } else {
+              prompt = generateMnemonicPrompt(currentWord.word, currentWord.word);
+              captionKo = currentWord.definitionKo || '';
+              captionEn = `Memory tip for ${currentWord.word}`;
+            }
+          } else {
+            // RHYME
+            const rhymeInfo = currentWord.rhymeInfo;
+            const rhymingWords = (rhymeInfo?.rhymingWords || []) as string[];
+
+            if (rhymingWords.length > 0) {
+              const rhymeResult = await generateRhymeScene(
+                currentWord.word,
+                currentWord.definition || '',
+                rhymingWords
+              );
+              prompt = rhymeResult.prompt;
+              captionKo = rhymeResult.captionKo;
+              captionEn = rhymeResult.captionEn;
+            } else {
+              prompt = generateRhymePrompt(currentWord.definition || '', currentWord.word);
+              captionKo = `${currentWord.word} 발음 연습`;
+              captionEn = `Pronunciation practice for ${currentWord.word}`;
+            }
+          }
+
+          // Generate and upload the image
+          const result = await generateAndUploadImage(prompt, visualType, currentWord.word);
+
+          if (result) {
+            // Delete existing visual if replacing
+            if (!skipExisting) {
+              await prisma.wordVisual.deleteMany({
+                where: { wordId: currentWord.id, type: visualType },
+              });
+            }
+
+            // Create visual record
+            await prisma.wordVisual.create({
+              data: {
+                wordId: currentWord.id,
+                type: visualType,
+                imageUrl: result.imageUrl,
+                cloudinaryPublicId: result.publicId,
+                prompt,
+                seed: result.seed,
+                captionKo,
+                captionEn,
+              },
+            });
+
+            session.imagesGenerated++;
+            logger.info(`[Internal/ImageGen] Session ${sessionId}: Generated ${visualType} for "${currentWord.word}"`);
+          }
+
+          // Add delay between image generations to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 3000));
+
+        } catch (imageError) {
+          const errorMsg = imageError instanceof Error ? imageError.message : String(imageError);
+          logger.error(`[Internal/ImageGen] Session ${sessionId}: Error generating ${visualType} for "${currentWord.word}":`, imageError);
+          session.errors.push(`${currentWord.word}-${visualType}: ${errorMsg}`);
+
+          // Continue with next type despite error
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+
+      session.wordsProcessed++;
+      session.batchesCompleted++;
+      session.lastBatchAt = new Date();
+
+      logger.info(`[Internal/ImageGen] Session ${sessionId}: Completed "${currentWord.word}". Total: ${session.wordsProcessed} words, ${session.imagesGenerated} images`);
+
+      // Delay between words
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      logger.error(`[Internal/ImageGen] Session ${sessionId} error:`, error);
+      session.errors.push(`Batch ${session.batchesCompleted + 1}: ${errorMsg}`);
+
+      // Continue despite errors, but add a longer delay
+      await new Promise(resolve => setTimeout(resolve, 10000));
+    }
+  }
+
+  session.isRunning = false;
+  logger.info(`[Internal/ImageGen] Session ${sessionId} finished. Words: ${session.wordsProcessed}, Images: ${session.imagesGenerated}`);
+}
 
 export default router;
