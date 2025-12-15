@@ -91,7 +91,7 @@ export default function WordVisualPanel({
   images,
   visuals,
   word,
-  showEnglishCaption = false,
+  showEnglishCaption = true,
 }: WordVisualPanelProps) {
   const [activeTab, setActiveTab] = useState<VisualType>('CONCEPT');
   const [imageError, setImageError] = useState<Record<string, boolean>>({});
