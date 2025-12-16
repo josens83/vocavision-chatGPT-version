@@ -45,3 +45,6 @@ export {
 
 // User Stats Hook
 export { useUserStats } from './useUserStats';
+
+// Search Hook
+export { useSearch, useDebounce } from './useSearch';
