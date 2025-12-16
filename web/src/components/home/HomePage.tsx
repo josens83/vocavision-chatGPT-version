@@ -7,7 +7,8 @@ import DDayBanner from "./DDayBanner";
 import ExamIconGrid from "./ExamIconGrid";
 import HeroCarousel from "./HeroCarousel";
 import { CategoryGrid, StudyTypeCard, ExamCategoryCard, examCategories } from "./CategoryCard";
-import { LevelFilter, SectionHeader } from "@/components/ui";
+import PopularWordsSection, { sampleBestWords, sampleNewWords } from "./PopularWordsSection";
+import { SectionHeader } from "@/components/ui";
 import { StreakCalendar, ContinueLearning } from "@/components/dashboard";
 import { PLATFORM_STATS, GUEST_SAMPLE_WORDS } from "@/constants/stats";
 import { useAuthStore } from "@/lib/store";
@@ -21,21 +22,6 @@ const guestStudyTypes = [
   { title: "단어장", description: "전체 단어 목록 보기", type: "vocabulary" as const, href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, countLabel: "총 단어" },
 ];
 
-// 인기 단어 샘플 (비로그인용 예시 데이터)
-const samplePopularWords = [
-  { id: "1", word: "ubiquitous", meaning: "어디에나 있는", level: "L2", views: 1234 },
-  { id: "2", word: "ephemeral", meaning: "일시적인", level: "L3", views: 987 },
-  { id: "3", word: "pragmatic", meaning: "실용적인", level: "L2", views: 876 },
-  { id: "4", word: "meticulous", meaning: "꼼꼼한", level: "L2", views: 765 },
-  { id: "5", word: "resilient", meaning: "회복력 있는", level: "L3", views: 654 },
-  { id: "6", word: "abundant", meaning: "풍부한", level: "L1", views: 543 },
-];
-
-const levelColors: Record<string, string> = {
-  L1: "bg-green-100 text-green-700",
-  L2: "bg-blue-100 text-blue-700",
-  L3: "bg-purple-100 text-purple-700",
-};
 
 // 사용자 학습 통계 타입
 interface UserLearningStats {
@@ -62,7 +48,6 @@ interface UserLearningStats {
 }
 
 export default function HomePage() {
-  const [activeLevel, setActiveLevel] = useState("all");
   const { user, _hasHydrated } = useAuthStore();
   const isLoggedIn = !!user;
 
@@ -131,11 +116,6 @@ export default function HomePage() {
     ];
   };
 
-  // 레벨별 필터링 (샘플 데이터)
-  const filteredWords = activeLevel === "all"
-    ? samplePopularWords
-    : samplePopularWords.filter(w => w.level === activeLevel);
-
   return (
     <div className="min-h-screen bg-white">
       <Hero />
@@ -157,63 +137,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* BEST 인기 단어 섹션 */}
-      <section className="py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <SectionHeader
-              badge="best"
-              title="인기 단어"
-              subtitle="다른 학습자들이 가장 많이 학습한 단어"
-              viewAllHref="/words?sort=popular"
-            />
-            <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">
-              예시 데이터
-            </span>
-          </div>
-
-          {/* 레벨 필터 */}
-          <LevelFilter
-            activeLevel={activeLevel}
-            onLevelChange={setActiveLevel}
-            counts={{
-              all: PLATFORM_STATS.totalWords,
-              L1: PLATFORM_STATS.levels.L1,
-              L2: PLATFORM_STATS.levels.L2,
-              L3: PLATFORM_STATS.levels.L3,
-            }}
-            className="mb-6"
-          />
-
-          {/* 단어 카드 그리드 */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {filteredWords.map((word, index) => (
-              <a
-                key={word.id}
-                href={`/words/${word.id}`}
-                className="
-                  group bg-white rounded-xl p-4 border border-slate-100
-                  hover:border-brand-primary hover:shadow-lg
-                  transition-all duration-200
-                  opacity-0 animate-fade-in-up
-                "
-                style={{ animationDelay: `${index * 0.05}s`, animationFillMode: "forwards" }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${levelColors[word.level]}`}>
-                    {word.level}
-                  </span>
-                  <span className="text-xs text-slate-400">{word.views.toLocaleString()}회</span>
-                </div>
-                <h4 className="font-semibold text-slate-900 group-hover:text-brand-primary transition-colors">
-                  {word.word}
-                </h4>
-                <p className="text-sm text-slate-500 mt-1 line-clamp-1">{word.meaning}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* BEST/NEW 인기 단어 섹션 - Phase 1 */}
+      <PopularWordsSection
+        bestWords={sampleBestWords}
+        newWords={sampleNewWords}
+      />
 
       {/* 시험별 학습 섹션 */}
       <section className="py-16 px-6 bg-slate-50">
