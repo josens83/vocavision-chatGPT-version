@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PLATFORM_STATS } from "@/constants/stats";
+import { useAuthStore } from "@/lib/store";
 
 const Icons = {
   Play: () => (
@@ -48,6 +49,8 @@ const features = [
 
 export default function Hero() {
   const [isVisible, setIsVisible] = useState(false);
+  const { user, _hasHydrated } = useAuthStore();
+  const isLoggedIn = !!user;
 
   useEffect(() => {
     setIsVisible(true);
@@ -122,19 +125,36 @@ export default function Hero() {
               </div>
             ))}
 
-            <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-brand-primary to-brand-primary/80 text-white">
-              <div className="relative z-10">
-                <h4 className="text-lg font-semibold mb-2">오늘의 학습 목표</h4>
-                <p className="text-white/80 mb-4">새로운 단어 10개를 학습하고 복습 퀴즈를 완료해보세요!</p>
-                <Link href="/quiz" className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
-                  <span>퀴즈 시작</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
+            {/* 비로그인 시: 가입 유도 카드 / 로그인 시: 학습 목표 카드 */}
+            {!isLoggedIn ? (
+              <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <div className="relative z-10">
+                  <h4 className="text-lg font-semibold mb-2">지금 시작하세요!</h4>
+                  <p className="text-white/80 mb-4">무료로 가입하고 {PLATFORM_STATS.totalWords.toLocaleString()}개 단어를 학습하세요</p>
+                  <Link href="/auth/register" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-green-600 hover:bg-white/90 rounded-lg font-medium transition-colors">
+                    <span>무료로 시작하기</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Link>
+                </div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full" />
               </div>
-              <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full" />
-            </div>
+            ) : (
+              <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-brand-primary to-brand-primary/80 text-white">
+                <div className="relative z-10">
+                  <h4 className="text-lg font-semibold mb-2">오늘의 학습 목표</h4>
+                  <p className="text-white/80 mb-4">새로운 단어 10개를 학습하고 복습 퀴즈를 완료해보세요!</p>
+                  <Link href="/quiz" className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                    <span>퀴즈 시작</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Link>
+                </div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full" />
+              </div>
+            )}
           </div>
         </div>
       </div>
