@@ -11,3 +11,6 @@ export * from './TabFilter';
 export * from './SectionHeader';
 export * from './LearningStatusTabs';
 export * from './ProgressIndicator';
+export * from './StickyActionBar';
+export * from './ActionButtonGroup';
+export * from './Accordion';
