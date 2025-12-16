@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import Hero from "./Hero";
 import DDayBanner from "./DDayBanner";
 import ExamIconGrid from "./ExamIconGrid";
@@ -8,17 +9,20 @@ import HeroCarousel from "./HeroCarousel";
 import { CategoryGrid, StudyTypeCard, ExamCategoryCard, examCategories } from "./CategoryCard";
 import { LevelFilter, SectionHeader } from "@/components/ui";
 import { StreakCalendar, ContinueLearning } from "@/components/dashboard";
-import { PLATFORM_STATS } from "@/constants/stats";
+import { PLATFORM_STATS, GUEST_SAMPLE_WORDS } from "@/constants/stats";
+import { useAuthStore } from "@/lib/store";
+import { progressAPI } from "@/lib/api";
 
-const studyTypes = [
-  { title: "플래시카드", description: "카드 뒤집기로 단어 암기", type: "flashcard" as const, href: "/learn?exam=CSAT", countLabel: "SM-2 학습" },
+// 비로그인용 학습 방법 (숫자 없이 설명만)
+const guestStudyTypes = [
+  { title: "플래시카드", description: "SM-2 알고리즘 기반 간격 반복 학습", type: "flashcard" as const, href: "/learn?exam=CSAT", countLabel: "SM-2 학습" },
   { title: "퀴즈 도전", description: "4지선다 문제 풀기", type: "quiz" as const, href: "/quiz?exam=CSAT", countLabel: "객관식 퀴즈" },
   { title: "복습하기", description: "잊어버린 단어 다시 학습", type: "review" as const, href: "/review?exam=CSAT", countLabel: "복습 필요" },
   { title: "단어장", description: "전체 단어 목록 보기", type: "vocabulary" as const, href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, countLabel: "총 단어" },
 ];
 
-// 인기 단어 샘플 (실제로는 API에서 가져옴)
-const popularWords = [
+// 인기 단어 샘플 (비로그인용 예시 데이터)
+const samplePopularWords = [
   { id: "1", word: "ubiquitous", meaning: "어디에나 있는", level: "L2", views: 1234 },
   { id: "2", word: "ephemeral", meaning: "일시적인", level: "L3", views: 987 },
   { id: "3", word: "pragmatic", meaning: "실용적인", level: "L2", views: 876 },
@@ -27,58 +31,110 @@ const popularWords = [
   { id: "6", word: "abundant", meaning: "풍부한", level: "L1", views: 543 },
 ];
 
-// 샘플 학습 세션 데이터
-const sampleSession = {
-  id: "1",
-  title: "수능 필수 단어 L1",
-  exam: "CSAT",
-  level: "L1",
-  wordsLearned: 45,
-  totalWords: 100,
-  lastStudied: new Date(Date.now() - 1000 * 60 * 30), // 30분 전
-  mode: "flashcard" as const,
-};
-
-// 샘플 스트릭 데이터
-const generateStudiedDays = (): string[] => {
-  const days: string[] = [];
-  const today = new Date();
-
-  // 지난 7일 중 5일 학습
-  for (let i = 0; i < 7; i++) {
-    if (i !== 2 && i !== 5) { // 2일, 5일 전은 쉼
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      days.push(date.toISOString().split("T")[0]);
-    }
-  }
-
-  // 이전 주에도 몇 일 추가
-  for (let i = 8; i < 15; i++) {
-    if (Math.random() > 0.3) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      days.push(date.toISOString().split("T")[0]);
-    }
-  }
-
-  return days;
-};
-
 const levelColors: Record<string, string> = {
   L1: "bg-green-100 text-green-700",
   L2: "bg-blue-100 text-blue-700",
   L3: "bg-purple-100 text-purple-700",
 };
 
+// 사용자 학습 통계 타입
+interface UserLearningStats {
+  flashcardDue: number;
+  reviewNeeded: number;
+  todayNewWords: number;
+  todayNewWordsTarget: number;
+  todayReviewed: number;
+  todayReviewTarget: number;
+  quizAccuracy: number;
+  currentStreak: number;
+  bestStreak: number;
+  studiedDays: string[];
+  lastSession?: {
+    id: string;
+    title: string;
+    exam: string;
+    level: string;
+    wordsLearned: number;
+    totalWords: number;
+    lastStudied: Date;
+    mode: "flashcard" | "quiz" | "review";
+  };
+}
+
 export default function HomePage() {
   const [activeLevel, setActiveLevel] = useState("all");
-  const studiedDays = generateStudiedDays();
+  const { user, _hasHydrated } = useAuthStore();
+  const isLoggedIn = !!user;
 
-  // 레벨별 필터링
+  // 로그인 사용자용 학습 통계
+  const [userStats, setUserStats] = useState<UserLearningStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  // 로그인 시 사용자 통계 로드
+  useEffect(() => {
+    if (isLoggedIn && _hasHydrated) {
+      loadUserStats();
+    }
+  }, [isLoggedIn, _hasHydrated]);
+
+  const loadUserStats = async () => {
+    setStatsLoading(true);
+    try {
+      // 복습 대기 단어 수 가져오기
+      const dueResponse = await progressAPI.getDueReviews();
+      const progressResponse = await progressAPI.getUserProgress();
+
+      // 오늘 학습 통계 계산
+      const today = new Date().toISOString().split('T')[0];
+      const todayReviews = progressResponse.progress?.filter((p: any) =>
+        p.lastReviewDate && p.lastReviewDate.startsWith(today)
+      ) || [];
+
+      // 스트릭 데이터 (학습한 날짜들)
+      const studiedDays = progressResponse.progress
+        ?.filter((p: any) => p.lastReviewDate)
+        .map((p: any) => p.lastReviewDate.split('T')[0])
+        .filter((date: string, index: number, self: string[]) => self.indexOf(date) === index) || [];
+
+      setUserStats({
+        flashcardDue: dueResponse.count || 0,
+        reviewNeeded: dueResponse.count || 0,
+        todayNewWords: todayReviews.filter((p: any) => p.totalReviews === 1).length,
+        todayNewWordsTarget: (user as any)?.dailyGoal || 10,
+        todayReviewed: todayReviews.length,
+        todayReviewTarget: 15,
+        quizAccuracy: progressResponse.progress?.length > 0
+          ? Math.round(progressResponse.progress.reduce((acc: number, p: any) =>
+              acc + (p.totalReviews > 0 ? p.correctCount / p.totalReviews : 0), 0)
+              / progressResponse.progress.length * 100)
+          : 0,
+        currentStreak: progressResponse.stats?.currentStreak || 0,
+        bestStreak: progressResponse.stats?.longestStreak || 0,
+        studiedDays,
+      });
+    } catch (error) {
+      console.error('Failed to load user stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // 로그인 사용자용 학습 방법 (실제 숫자 포함)
+  const getStudyTypes = () => {
+    if (!isLoggedIn || !userStats) return guestStudyTypes;
+
+    return [
+      { title: "플래시카드", description: "카드 뒤집기로 단어 암기", type: "flashcard" as const, href: "/learn?exam=CSAT", count: userStats.flashcardDue, countLabel: "복습 대기" },
+      { title: "퀴즈 도전", description: "4지선다 문제 풀기", type: "quiz" as const, href: "/quiz?exam=CSAT", count: 10, countLabel: "오늘의 문제" },
+      { title: "복습하기", description: "잊어버린 단어 다시 학습", type: "review" as const, href: "/review?exam=CSAT", count: userStats.reviewNeeded, countLabel: "복습 필요" },
+      { title: "단어장", description: "전체 단어 목록 보기", type: "vocabulary" as const, href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, countLabel: "총 단어" },
+    ];
+  };
+
+  // 레벨별 필터링 (샘플 데이터)
   const filteredWords = activeLevel === "all"
-    ? popularWords
-    : popularWords.filter(w => w.level === activeLevel);
+    ? samplePopularWords
+    : samplePopularWords.filter(w => w.level === activeLevel);
 
   return (
     <div className="min-h-screen bg-white">
@@ -104,12 +160,17 @@ export default function HomePage() {
       {/* BEST 인기 단어 섹션 */}
       <section className="py-16 px-6">
         <div className="max-w-7xl mx-auto">
-          <SectionHeader
-            badge="best"
-            title="인기 단어"
-            subtitle="다른 학습자들이 가장 많이 학습한 단어"
-            viewAllHref="/words?sort=popular"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <SectionHeader
+              badge="best"
+              title="인기 단어"
+              subtitle="다른 학습자들이 가장 많이 학습한 단어"
+              viewAllHref="/words?sort=popular"
+            />
+            <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">
+              예시 데이터
+            </span>
+          </div>
 
           {/* 레벨 필터 */}
           <LevelFilter
@@ -183,7 +244,7 @@ export default function HomePage() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {studyTypes.map((type, index) => (
+            {getStudyTypes().map((type, index) => (
               <div key={type.title} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 0.1}s`, animationFillMode: "forwards" }}>
                 <StudyTypeCard {...type} />
               </div>
@@ -197,21 +258,77 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <SectionHeader
             title="나의 학습 현황"
-            subtitle="학습 진행 상황을 확인하고 스트릭을 유지하세요"
-            viewAllHref="/my"
+            subtitle={isLoggedIn ? "학습 진행 상황을 확인하고 스트릭을 유지하세요" : "로그인하고 학습 기록을 관리하세요"}
+            viewAllHref={isLoggedIn ? "/my" : undefined}
           />
 
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* 이어서 학습하기 */}
-            <ContinueLearning session={sampleSession} />
+          {/* 비로그인 시: 로그인 유도 UI */}
+          {!isLoggedIn ? (
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="card p-8 text-center bg-gradient-to-br from-brand-primary/5 to-brand-primary/10">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-primary/10 flex items-center justify-center">
+                  <span className="text-3xl">📚</span>
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">이어서 학습하기</h3>
+                <p className="text-sm text-slate-500 mb-4">
+                  로그인하면 마지막 학습 위치에서<br />바로 이어서 학습할 수 있어요
+                </p>
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-primary/90 transition-colors"
+                >
+                  로그인하고 시작하기
+                </Link>
+              </div>
 
-            {/* 스트릭 캘린더 */}
-            <StreakCalendar
-              studiedDays={studiedDays}
-              currentStreak={5}
-              bestStreak={12}
-            />
-          </div>
+              <div className="card p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-study-flashcard-light flex items-center justify-center">
+                  <span className="text-3xl">🔥</span>
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">스트릭 캘린더</h3>
+                <p className="text-sm text-slate-500 mb-4">
+                  로그인하면 연속 학습일을 기록하고<br />동기부여를 받을 수 있어요
+                </p>
+                <Link
+                  href="/auth/login"
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-brand-primary text-brand-primary rounded-lg font-medium hover:bg-brand-primary/5 transition-colors"
+                >
+                  로그인하기
+                </Link>
+              </div>
+            </div>
+          ) : (
+            /* 로그인 시: 실제 데이터 */
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* 이어서 학습하기 */}
+              {userStats?.lastSession ? (
+                <ContinueLearning session={userStats.lastSession} />
+              ) : (
+                <div className="card p-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-primary/10 flex items-center justify-center">
+                    <span className="text-3xl">🚀</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">첫 학습을 시작하세요!</h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                    아직 학습 기록이 없어요.<br />지금 바로 단어 학습을 시작해보세요!
+                  </p>
+                  <Link
+                    href="/learn?exam=CSAT"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-primary/90 transition-colors"
+                  >
+                    학습 시작하기
+                  </Link>
+                </div>
+              )}
+
+              {/* 스트릭 캘린더 */}
+              <StreakCalendar
+                studiedDays={userStats?.studiedDays || []}
+                currentStreak={userStats?.currentStreak || 0}
+                bestStreak={userStats?.bestStreak || 0}
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -219,50 +336,116 @@ export default function HomePage() {
       <section className="py-16 px-6">
         <div className="max-w-7xl mx-auto">
           <SectionHeader
-            title="오늘의 목표"
-            subtitle="매일 조금씩, 꾸준히 학습하세요"
+            title="오늘의 학습 목표"
+            subtitle={isLoggedIn ? "매일 조금씩, 꾸준히 학습하세요" : "로그인하고 나만의 학습 목표를 설정하세요"}
           />
 
-          <div className="grid md:grid-cols-4 gap-4">
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium text-slate-600">새 단어 학습</span>
-                <span className="text-sm text-slate-500">7/10</span>
-              </div>
-              <div className="progress-bar mb-2"><div className="progress-bar__fill" style={{ width: "70%" }} /></div>
-              <p className="text-xs text-slate-400">3개 더 학습하면 목표 달성!</p>
-            </div>
-
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium text-slate-600">복습 완료</span>
-                <span className="text-sm text-slate-500">12/15</span>
-              </div>
-              <div className="progress-bar mb-2"><div className="progress-bar__fill" style={{ width: "80%" }} /></div>
-              <p className="text-xs text-slate-400">오늘 복습할 단어가 3개 남았어요</p>
-            </div>
-
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium text-slate-600">퀴즈 점수</span>
-                <span className="text-sm text-slate-500">85%</span>
-              </div>
-              <div className="progress-bar mb-2"><div className="progress-bar__fill bg-gradient-to-r from-level-beginner to-level-intermediate" style={{ width: "85%" }} /></div>
-              <p className="text-xs text-slate-400">평균 이상의 정답률이에요</p>
-            </div>
-
-            <div className="card p-6 bg-gradient-to-br from-study-flashcard-light to-white">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-study-flashcard flex items-center justify-center">
-                  <span className="text-2xl">🔥</span>
-                </div>
-                <div>
-                  <div className="text-2xl font-display font-bold text-slate-900">5일</div>
-                  <div className="text-sm text-slate-600">연속 학습 중!</div>
+          {/* 비로그인 시: 로그인 유도 UI */}
+          {!isLoggedIn ? (
+            <div className="card p-8 bg-gradient-to-br from-brand-primary/5 to-brand-primary/10 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="text-5xl mb-4">🎯</div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  나만의 학습 목표를 설정하세요
+                </h3>
+                <p className="text-slate-600 mb-6">
+                  로그인하면 매일 학습 목표를 추적하고<br />
+                  스트릭을 유지하며 성취감을 느낄 수 있어요!
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link
+                    href="/auth/login"
+                    className="px-6 py-3 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-primary/90 transition-colors"
+                  >
+                    로그인하고 시작하기
+                  </Link>
+                  <Link
+                    href="/auth/register"
+                    className="px-6 py-3 border border-brand-primary text-brand-primary rounded-lg font-medium hover:bg-brand-primary/5 transition-colors"
+                  >
+                    무료 가입하기
+                  </Link>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* 로그인 시: 실제 데이터 */
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium text-slate-600">새 단어 학습</span>
+                  <span className="text-sm text-slate-500">
+                    {userStats?.todayNewWords || 0}/{userStats?.todayNewWordsTarget || 10}
+                  </span>
+                </div>
+                <div className="progress-bar mb-2">
+                  <div
+                    className="progress-bar__fill"
+                    style={{ width: `${Math.min(100, ((userStats?.todayNewWords || 0) / (userStats?.todayNewWordsTarget || 10)) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400">
+                  {(userStats?.todayNewWordsTarget || 10) - (userStats?.todayNewWords || 0) > 0
+                    ? `${(userStats?.todayNewWordsTarget || 10) - (userStats?.todayNewWords || 0)}개 더 학습하면 목표 달성!`
+                    : "오늘 목표 달성! 🎉"}
+                </p>
+              </div>
+
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium text-slate-600">복습 완료</span>
+                  <span className="text-sm text-slate-500">
+                    {userStats?.todayReviewed || 0}/{userStats?.todayReviewTarget || 15}
+                  </span>
+                </div>
+                <div className="progress-bar mb-2">
+                  <div
+                    className="progress-bar__fill"
+                    style={{ width: `${Math.min(100, ((userStats?.todayReviewed || 0) / (userStats?.todayReviewTarget || 15)) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400">
+                  {(userStats?.todayReviewTarget || 15) - (userStats?.todayReviewed || 0) > 0
+                    ? `오늘 복습할 단어가 ${(userStats?.todayReviewTarget || 15) - (userStats?.todayReviewed || 0)}개 남았어요`
+                    : "복습 완료! 🎉"}
+                </p>
+              </div>
+
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium text-slate-600">퀴즈 정답률</span>
+                  <span className="text-sm text-slate-500">{userStats?.quizAccuracy || 0}%</span>
+                </div>
+                <div className="progress-bar mb-2">
+                  <div
+                    className="progress-bar__fill bg-gradient-to-r from-level-beginner to-level-intermediate"
+                    style={{ width: `${userStats?.quizAccuracy || 0}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-400">
+                  {(userStats?.quizAccuracy || 0) >= 80
+                    ? "훌륭해요! 정답률이 높아요 👍"
+                    : "꾸준히 학습하면 정답률이 올라가요!"}
+                </p>
+              </div>
+
+              <div className="card p-6 bg-gradient-to-br from-study-flashcard-light to-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-study-flashcard flex items-center justify-center">
+                    <span className="text-2xl">🔥</span>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-display font-bold text-slate-900">
+                      {userStats?.currentStreak || 0}일
+                    </div>
+                    <div className="text-sm text-slate-600">
+                      {(userStats?.currentStreak || 0) > 0 ? "연속 학습 중!" : "오늘 학습을 시작하세요!"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

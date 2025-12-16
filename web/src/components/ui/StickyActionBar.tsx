@@ -76,9 +76,6 @@ export function StickyActionBar({
 }: StickyActionBarProps) {
   const styles = variantStyles[variant];
 
-  const PrimaryButton = primaryHref ? Link : "button";
-  const SecondaryButton = secondaryHref ? Link : "button";
-
   return (
     <div
       className={`
@@ -118,55 +115,86 @@ export function StickyActionBar({
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Secondary Button */}
           {secondaryText && (
-            <SecondaryButton
-              {...(secondaryHref ? { href: secondaryHref } : {})}
-              onClick={onSecondaryClick}
-              className={`
-                px-4 py-2.5 rounded-xl font-medium text-sm
-                transition-colors
-                ${styles.secondary}
-              `}
-            >
-              {secondaryText}
-            </SecondaryButton>
+            secondaryHref ? (
+              <Link
+                href={secondaryHref}
+                onClick={onSecondaryClick}
+                className={`
+                  px-4 py-2.5 rounded-xl font-medium text-sm
+                  transition-colors
+                  ${styles.secondary}
+                `}
+              >
+                {secondaryText}
+              </Link>
+            ) : (
+              <button
+                onClick={onSecondaryClick}
+                className={`
+                  px-4 py-2.5 rounded-xl font-medium text-sm
+                  transition-colors
+                  ${styles.secondary}
+                `}
+              >
+                {secondaryText}
+              </button>
+            )
           )}
 
           {/* Primary Button */}
-          <PrimaryButton
-            {...(primaryHref ? { href: primaryHref } : {})}
-            onClick={onPrimaryClick}
-            disabled={primaryDisabled || loading}
-            className={`
-              px-6 py-2.5 rounded-xl font-semibold text-sm
-              transition-all
-              ${styles.primary}
-              ${primaryDisabled || loading ? "opacity-50 cursor-not-allowed" : "hover:-translate-y-0.5 hover:shadow-md"}
-              flex items-center gap-2
-            `}
-          >
-            {loading && (
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
+          {primaryHref && !primaryDisabled && !loading ? (
+            <Link
+              href={primaryHref}
+              onClick={onPrimaryClick}
+              className={`
+                px-6 py-2.5 rounded-xl font-semibold text-sm
+                transition-all
+                ${styles.primary}
+                hover:-translate-y-0.5 hover:shadow-md
+                flex items-center gap-2
+              `}
+            >
+              {primaryText}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            )}
-            {primaryText}
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </PrimaryButton>
+            </Link>
+          ) : (
+            <button
+              onClick={onPrimaryClick}
+              disabled={primaryDisabled || loading}
+              className={`
+                px-6 py-2.5 rounded-xl font-semibold text-sm
+                transition-all
+                ${styles.primary}
+                ${primaryDisabled || loading ? "opacity-50 cursor-not-allowed" : "hover:-translate-y-0.5 hover:shadow-md"}
+                flex items-center gap-2
+              `}
+            >
+              {loading && (
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              )}
+              {primaryText}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>
