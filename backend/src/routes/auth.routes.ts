@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getProfile } from '../controllers/auth.controller';
+import { register, login, getProfile, kakaoLogin } from '../controllers/auth.controller';
 import { authenticateToken } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -104,5 +104,42 @@ router.post('/login', login);
  *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.get('/profile', authenticateToken, getProfile);
+
+/**
+ * @swagger
+ * /auth/kakao:
+ *   post:
+ *     summary: 카카오 OAuth 로그인
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: 카카오 인가 코드
+ *     responses:
+ *       200:
+ *         description: 로그인 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       400:
+ *         description: 잘못된 인가 코드
+ */
+router.post('/kakao', kakaoLogin);
 
 export default router;

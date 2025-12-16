@@ -4,6 +4,11 @@ import { hashPassword, comparePassword } from '../utils/password.util';
 import { generateToken } from '../utils/jwt.util';
 import { AppError } from '../middleware/error.middleware';
 
+// Kakao OAuth 설정
+const KAKAO_CLIENT_ID = process.env.KAKAO_CLIENT_ID;
+const KAKAO_CLIENT_SECRET = process.env.KAKAO_CLIENT_SECRET;
+const KAKAO_REDIRECT_URI = process.env.KAKAO_REDIRECT_URI;
+
 export const register = async (
   req: Request,
   res: Response,
@@ -175,6 +180,128 @@ export const getProfile = async (
 
     res.json({ user });
   } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 카카오 로그인 처리
+ */
+export const kakaoLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      throw new AppError('인가 코드가 필요합니다', 400);
+    }
+
+    if (!KAKAO_CLIENT_ID || !KAKAO_CLIENT_SECRET || !KAKAO_REDIRECT_URI) {
+      console.error('[KakaoLogin] Missing environment variables');
+      throw new AppError('카카오 로그인 설정이 완료되지 않았습니다', 500);
+    }
+
+    // 1. 카카오 토큰 발급
+    console.log('[KakaoLogin] Requesting token from Kakao...');
+    const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: KAKAO_CLIENT_ID,
+        client_secret: KAKAO_CLIENT_SECRET,
+        redirect_uri: KAKAO_REDIRECT_URI,
+        code,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.json();
+      console.error('[KakaoLogin] Token error:', errorData);
+      throw new AppError('카카오 토큰 발급 실패', 400);
+    }
+
+    const tokenData = await tokenResponse.json();
+    const { access_token } = tokenData;
+
+    // 2. 카카오 사용자 정보 조회
+    console.log('[KakaoLogin] Fetching user info from Kakao...');
+    const userResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    if (!userResponse.ok) {
+      throw new AppError('카카오 사용자 정보 조회 실패', 400);
+    }
+
+    const kakaoUser = await userResponse.json();
+    const kakaoId = String(kakaoUser.id);
+    const nickname = kakaoUser.properties?.nickname || '사용자';
+    const profileImage = kakaoUser.properties?.profile_image || null;
+
+    console.log('[KakaoLogin] Kakao user:', { kakaoId, nickname });
+
+    // 3. 기존 사용자 확인 또는 새 사용자 생성
+    let user = await prisma.user.findUnique({
+      where: { kakaoId },
+    });
+
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 7); // 7-day trial
+
+    if (!user) {
+      // 새 사용자 생성
+      user = await prisma.user.create({
+        data: {
+          kakaoId,
+          name: nickname,
+          avatar: profileImage,
+          provider: 'kakao',
+          subscriptionStatus: 'TRIAL',
+          trialEnd,
+        },
+      });
+      console.log('[KakaoLogin] New user created:', user.id);
+    } else {
+      // 기존 사용자 정보 업데이트
+      user = await prisma.user.update({
+        where: { kakaoId },
+        data: {
+          name: nickname,
+          avatar: profileImage,
+          lastActiveDate: new Date(),
+        },
+      });
+      console.log('[KakaoLogin] Existing user logged in:', user.id);
+    }
+
+    // 4. JWT 토큰 발급
+    const token = generateToken(user.id, user.role);
+
+    // 5. 응답
+    res.json({
+      success: true,
+      message: '카카오 로그인 성공',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+        provider: user.provider,
+        subscriptionStatus: user.subscriptionStatus,
+      },
+    });
+  } catch (error) {
+    console.error('[KakaoLogin] Error:', error);
     next(error);
   }
 };

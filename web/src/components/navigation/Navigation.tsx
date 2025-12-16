@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, ReactNode } from "react";
 import { PLATFORM_STATS } from "@/constants/stats";
+import { useAuthStore } from "@/lib/store";
 
 export interface NavItem {
   label: string;
@@ -180,11 +181,19 @@ export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
+  const { user, logout, _hasHydrated } = useAuthStore();
+  const isAuthenticated = !!user;
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/';
+  };
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-transparent"}`}>
@@ -213,10 +222,44 @@ export default function Navigation() {
             <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block">
               <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </button>
-            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors hidden sm:block">
-              <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-            </button>
-            <Link href="/auth/login" className="btn btn-primary py-2 hidden sm:flex">시작하기</Link>
+
+            {/* 로그인/유저 정보 */}
+            {!_hasHydrated ? (
+              <div className="w-8 h-8 bg-slate-200 rounded-full animate-pulse hidden sm:block" />
+            ) : isAuthenticated && user ? (
+              <div className="hidden sm:flex items-center gap-3">
+                {/* 프로필 이미지 */}
+                {user.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name || '사용자'}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-slate-200"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-brand-primary/10 flex items-center justify-center">
+                    <span className="text-brand-primary font-medium text-sm">
+                      {user.name?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                )}
+
+                {/* 이름 */}
+                <span className="text-sm font-medium text-slate-700 hidden md:block">
+                  {user.name}
+                </span>
+
+                {/* 로그아웃 버튼 */}
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  로그아웃
+                </button>
+              </div>
+            ) : (
+              <Link href="/auth/login" className="btn btn-primary py-2 hidden sm:flex">시작하기</Link>
+            )}
+
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors lg:hidden">
               <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>

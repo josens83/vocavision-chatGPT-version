@@ -7,6 +7,7 @@ import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { validateEmail, validatePassword, validateForm } from '@/lib/validation';
 import { FormInput, FormError, SubmitButton } from '@/components/ui/FormInput';
+import { getKakaoLoginUrl } from '@/lib/auth/kakao';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
 
   const validateField = useCallback((field: string, value: string) => {
@@ -75,7 +77,7 @@ export default function LoginPage() {
     try {
       const response = await authAPI.login(formData);
       setAuth(response.user, response.token);
-      router.push('/dashboard');
+      router.push('/');
     } catch (err: any) {
       setServerError(err.response?.data?.error || '이메일 또는 비밀번호가 올바르지 않습니다');
     } finally {
@@ -83,58 +85,124 @@ export default function LoginPage() {
     }
   };
 
+  const handleKakaoLogin = () => {
+    setKakaoLoading(true);
+    window.location.href = getKakaoLoginUrl();
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
-          로그인
-        </h1>
-        <p className="text-gray-600 mb-8 text-center">
-          VocaVision에 오신 것을 환영합니다
-        </p>
-
-        {serverError && (
-          <div className="mb-6">
-            <FormError message={serverError} />
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-          <FormInput
-            label="이메일"
-            type="email"
-            required
-            value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            onBlur={() => handleBlur('email')}
-            error={touched.email ? errors.email : undefined}
-            placeholder="your@email.com"
-            autoComplete="email"
-          />
-
-          <FormInput
-            label="비밀번호"
-            type="password"
-            required
-            value={formData.password}
-            onChange={(e) => handleChange('password', e.target.value)}
-            onBlur={() => handleBlur('password')}
-            error={touched.password ? errors.password : undefined}
-            placeholder="비밀번호를 입력하세요"
-            autoComplete="current-password"
-          />
-
-          <SubmitButton loading={loading} loadingText="로그인 중...">
-            로그인
-          </SubmitButton>
-        </form>
-
-        <p className="mt-6 text-center text-gray-600">
-          계정이 없으신가요?{' '}
-          <Link href="/auth/register" className="text-blue-600 hover:underline font-medium">
-            회원가입
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* 로고 */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-primary to-brand-secondary flex items-center justify-center">
+                <span className="text-white font-display font-bold text-xl">V</span>
+              </div>
+              <span className="text-2xl font-display font-bold">
+                <span className="text-brand-primary">Voca</span>
+                <span className="text-slate-700">Vision</span>
+              </span>
+            </div>
           </Link>
-        </p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+          <h1 className="text-2xl font-bold text-slate-900 mb-2 text-center">
+            로그인
+          </h1>
+          <p className="text-slate-500 mb-6 text-center">
+            VocaVision에 오신 것을 환영합니다
+          </p>
+
+          {/* 카카오 로그인 버튼 */}
+          <button
+            onClick={handleKakaoLogin}
+            disabled={kakaoLoading || loading}
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl font-medium transition-all duration-200 bg-[#FEE500] hover:bg-[#FDD800] text-[#191919] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md mb-6"
+          >
+            {kakaoLoading ? (
+              <div className="w-5 h-5 border-2 border-[#191919] border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M12 4C7.58172 4 4 6.69378 4 10C4 12.0503 5.35914 13.8527 7.41234 14.9348L6.5547 18.1236C6.47909 18.4043 6.80135 18.6269 7.04882 18.4691L10.8471 15.8596C11.2251 15.9192 11.6102 15.9496 12 15.9496C16.4183 15.9496 20 13.2559 20 9.94963C20 6.64336 16.4183 4 12 4Z"
+                  fill="currentColor"
+                />
+              </svg>
+            )}
+            {kakaoLoading ? '로그인 중...' : '카카오로 시작하기'}
+          </button>
+
+          {/* 구분선 */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-slate-400">또는 이메일로 로그인</span>
+            </div>
+          </div>
+
+          {serverError && (
+            <div className="mb-6">
+              <FormError message={serverError} />
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            <FormInput
+              label="이메일"
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => handleChange('email', e.target.value)}
+              onBlur={() => handleBlur('email')}
+              error={touched.email ? errors.email : undefined}
+              placeholder="your@email.com"
+              autoComplete="email"
+            />
+
+            <FormInput
+              label="비밀번호"
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => handleChange('password', e.target.value)}
+              onBlur={() => handleBlur('password')}
+              error={touched.password ? errors.password : undefined}
+              placeholder="비밀번호를 입력하세요"
+              autoComplete="current-password"
+            />
+
+            <SubmitButton loading={loading} loadingText="로그인 중...">
+              이메일로 로그인
+            </SubmitButton>
+          </form>
+
+          <p className="mt-6 text-center text-slate-600">
+            계정이 없으신가요?{' '}
+            <Link href="/auth/register" className="text-brand-primary hover:underline font-medium">
+              회원가입
+            </Link>
+          </p>
+        </div>
+
+        {/* 홈으로 돌아가기 */}
+        <div className="text-center mt-6">
+          <Link
+            href="/"
+            className="text-slate-500 hover:text-slate-700 text-sm inline-flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            홈으로 돌아가기
+          </Link>
+        </div>
       </div>
     </div>
   );
