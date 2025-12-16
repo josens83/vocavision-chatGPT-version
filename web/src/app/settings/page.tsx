@@ -42,7 +42,7 @@ export default function SettingsPage() {
     }
 
     setName(user.name || '');
-    setEmail(user.email);
+    setEmail(user.email || '');
     loadSubscription();
   }, [user, hasHydrated, router]);
 
