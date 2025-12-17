@@ -253,7 +253,8 @@ function LearnPageContent() {
           score={wordsCorrect}
           total={wordsStudied}
           onRetry={handleRestart}
-          onHome={() => router.push('/dashboard')}
+          onHome={() => router.push(user ? '/dashboard' : '/')}
+          isGuest={!user}
         />
       </div>
     );
