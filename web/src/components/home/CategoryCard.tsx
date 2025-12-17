@@ -350,6 +350,10 @@ export interface StudyTypeCardProps {
   countLabel?: string;
   /** 비로그인 시 표시할 힌트 메시지 */
   guestHint?: string;
+  /** 로그인 필요 여부 (true면 비로그인 시 모달 표시) */
+  requiresAuth?: boolean;
+  /** 로그인 필요 시 클릭 핸들러 */
+  onAuthRequired?: () => void;
 }
 
 const studyTypeStyles: Record<StudyType, { text: string; bgLight: string; icon: ReactNode }> = {
@@ -375,33 +379,51 @@ const studyTypeStyles: Record<StudyType, { text: string; bgLight: string; icon: 
   },
 };
 
-export function StudyTypeCard({ title, description, type, href, count, countLabel = "항목", guestHint }: StudyTypeCardProps) {
+export function StudyTypeCard({ title, description, type, href, count, countLabel = "항목", guestHint, requiresAuth, onAuthRequired }: StudyTypeCardProps) {
   const styles = studyTypeStyles[type];
+
+  const content = (
+    <div className="card p-5 flex items-center gap-4 hover:border-slate-300 transition-all duration-200">
+      <div className={`w-14 h-14 rounded-xl ${styles.bgLight} ${styles.text} flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
+        {styles.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <h4 className="font-semibold text-slate-900 mb-1 group-hover:text-slate-600 transition-colors">{title}</h4>
+          {requiresAuth && (
+            <span className="text-sm text-amber-600">🔒</span>
+          )}
+        </div>
+        <p className="text-sm text-slate-500 truncate">{description}</p>
+      </div>
+      {count !== undefined ? (
+        <div className="text-right">
+          <div className={`text-2xl font-display font-bold ${styles.text}`}>{count.toLocaleString()}</div>
+          <div className="text-xs text-slate-400">{countLabel}</div>
+        </div>
+      ) : guestHint ? (
+        <div className="text-right">
+          <div className="text-sm text-slate-400">{guestHint}</div>
+        </div>
+      ) : null}
+      <svg className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </div>
+  );
+
+  // 로그인 필요한 카드면 버튼으로 처리
+  if (requiresAuth && onAuthRequired) {
+    return (
+      <button onClick={onAuthRequired} className="group block w-full text-left">
+        {content}
+      </button>
+    );
+  }
 
   return (
     <Link href={href} className="group block">
-      <div className="card p-5 flex items-center gap-4 hover:border-slate-300 transition-all duration-200">
-        <div className={`w-14 h-14 rounded-xl ${styles.bgLight} ${styles.text} flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
-          {styles.icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-slate-900 mb-1 group-hover:text-slate-600 transition-colors">{title}</h4>
-          <p className="text-sm text-slate-500 truncate">{description}</p>
-        </div>
-        {count !== undefined ? (
-          <div className="text-right">
-            <div className={`text-2xl font-display font-bold ${styles.text}`}>{count.toLocaleString()}</div>
-            <div className="text-xs text-slate-400">{countLabel}</div>
-          </div>
-        ) : guestHint ? (
-          <div className="text-right">
-            <div className="text-sm text-slate-400">{guestHint}</div>
-          </div>
-        ) : null}
-        <svg className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
+      {content}
     </Link>
   );
 }
