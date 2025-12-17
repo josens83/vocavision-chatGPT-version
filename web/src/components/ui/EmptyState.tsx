@@ -236,12 +236,15 @@ export function CelebrateCompletion({
   score,
   total,
   onRetry,
-  onHome
+  onHome,
+  isGuest = false,
 }: {
   score: number;
   total: number;
   onRetry?: () => void;
   onHome?: () => void;
+  /** Guest 사용자일 경우 가입 유도 CTA 표시 */
+  isGuest?: boolean;
 }) {
   const percentage = Math.round((score / total) * 100);
   const isPerfect = percentage === 100;
@@ -292,6 +295,32 @@ export function CelebrateCompletion({
           </button>
         )}
       </div>
+
+      {/* Guest 사용자에게 가입 유도 */}
+      {isGuest && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="bg-gradient-to-r from-brand-primary/10 to-brand-secondary/10 rounded-xl p-4">
+            <p className="text-sm text-gray-700 mb-3">
+              가입하면 학습 기록이 저장되고,<br />
+              내일 자동으로 복습을 추천받을 수 있어요!
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Link
+                href="/auth/register"
+                className="bg-brand-primary hover:bg-brand-primary/90 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+              >
+                무료로 가입하기
+              </Link>
+              <Link
+                href="/auth/login"
+                className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 transition-colors"
+              >
+                로그인
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
