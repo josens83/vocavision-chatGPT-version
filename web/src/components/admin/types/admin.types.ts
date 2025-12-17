@@ -178,6 +178,10 @@ export interface DashboardStats {
     hasMnemonic: number;
     hasExamples: number;
     hasMedia: number;
+    // Extended media stats
+    wordImageCount?: number;
+    wordVisualCount?: number;
+    wordsWithVisuals?: number; // Words that have at least one image
   };
 }
 
