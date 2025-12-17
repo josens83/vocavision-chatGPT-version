@@ -208,16 +208,24 @@ export default function HomePage() {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-primary/10 flex items-center justify-center">
                   <span className="text-3xl">📚</span>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">이어서 학습하기</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">먼저 체험해보세요</h3>
                 <p className="text-sm text-slate-500 mb-4">
-                  로그인하면 마지막 학습 위치에서<br />바로 이어서 학습할 수 있어요
+                  로그인 없이 플래시카드와 퀴즈를<br />바로 체험해볼 수 있어요
                 </p>
-                <Link
-                  href="/auth/login"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-primary/90 transition-colors"
-                >
-                  로그인하고 시작하기
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <Link
+                    href="/learn?exam=CSAT"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-primary/90 transition-colors"
+                  >
+                    무료 체험하기
+                  </Link>
+                  <Link
+                    href="/auth/login"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-600 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    로그인
+                  </Link>
+                </div>
               </div>
 
               <div className="card p-8 text-center">
@@ -276,33 +284,33 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <SectionHeader
             title="오늘의 학습 목표"
-            subtitle={isLoggedIn ? "매일 조금씩, 꾸준히 학습하세요" : "로그인하고 나만의 학습 목표를 설정하세요"}
+            subtitle={isLoggedIn ? "매일 조금씩, 꾸준히 학습하세요" : "먼저 체험하고, 마음에 들면 가입하세요"}
           />
 
-          {/* 비로그인 시: 로그인 유도 UI */}
+          {/* 비로그인 시: 체험 유도 UI */}
           {!isLoggedIn ? (
             <div className="card p-8 bg-gradient-to-br from-brand-primary/5 to-brand-primary/10 text-center">
               <div className="max-w-md mx-auto">
                 <div className="text-5xl mb-4">🎯</div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                  나만의 학습 목표를 설정하세요
+                  지금 바로 학습을 시작하세요
                 </h3>
                 <p className="text-slate-600 mb-6">
-                  로그인하면 매일 학습 목표를 추적하고<br />
-                  스트릭을 유지하며 성취감을 느낄 수 있어요!
+                  로그인 없이 먼저 체험해보고,<br />
+                  마음에 들면 가입해서 기록을 저장하세요!
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   <Link
-                    href="/auth/login"
+                    href="/learn?exam=CSAT"
                     className="px-6 py-3 bg-brand-primary text-white rounded-lg font-medium hover:bg-brand-primary/90 transition-colors"
                   >
-                    로그인하고 시작하기
+                    무료로 체험하기
                   </Link>
                   <Link
-                    href="/auth/register"
-                    className="px-6 py-3 border border-brand-primary text-brand-primary rounded-lg font-medium hover:bg-brand-primary/5 transition-colors"
+                    href="/auth/login"
+                    className="px-6 py-3 border border-slate-300 text-slate-600 rounded-lg font-medium hover:bg-slate-50 transition-colors"
                   >
-                    무료 가입하기
+                    로그인
                   </Link>
                 </div>
               </div>
