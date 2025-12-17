@@ -88,6 +88,12 @@ export function Footer() {
               <p className="mt-1">
                 사업자등록번호: 719-02-03518 | 대표: 김도헌
               </p>
+              <p className="mt-1">
+                주소: 경기도 화성시 동탄대로시범길 19, 1401동 701호
+              </p>
+              <p className="mt-1">
+                연락처: 010-5167-7227 | 이메일: support@vocavision.com
+              </p>
             </div>
             <div className="flex gap-4">
               <Link href="/terms" className="hover:text-gray-300 transition-colors">
