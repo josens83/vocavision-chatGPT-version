@@ -281,12 +281,14 @@ export const DashboardStatsView: React.FC<DashboardStatsViewProps> = ({
     },
     {
       label: '미디어',
-      value: stats.contentCoverage.hasMedia,
-      // Media is optional, target 1 per word = 100%
-      progress: Math.min(100, Math.round((stats.contentCoverage.hasMedia / totalWithContent) * 100)),
+      // Use wordsWithVisuals if available, otherwise fallback to hasMedia
+      value: (stats.contentCoverage as any).wordsWithVisuals ?? stats.contentCoverage.hasMedia,
+      // Calculate percentage based on words with visuals (not total image count)
+      progress: Math.min(100, Math.round(
+        (((stats.contentCoverage as any).wordsWithVisuals ?? stats.contentCoverage.hasMedia) / totalWithContent) * 100
+      )),
       color: '#EC4899',
-      isAverage: true,
-      average: (stats.contentCoverage.hasMedia / totalWithContent).toFixed(1),
+      isAverage: false, // Show as percentage, not average
     },
   ];
 

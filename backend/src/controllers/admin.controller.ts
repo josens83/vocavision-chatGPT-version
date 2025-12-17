@@ -55,27 +55,30 @@ export const getDashboardStats = async (
       }),
     ]);
 
-    // Content coverage - use safe try/catch for optional models
+    // Content coverage - query each model separately to handle errors gracefully
     let hasEtymology = 0;
     let hasMnemonic = 0;
     let hasExamples = 0;
     let hasMedia = 0;
     let hasWordVisuals = 0;
 
-    try {
-      [hasEtymology, hasMnemonic, hasExamples, hasMedia, hasWordVisuals] = await Promise.all([
-        prisma.etymology.count(),
-        prisma.mnemonic.count(),
-        prisma.example.count(),
-        prisma.wordImage.count(),
-        prisma.wordVisual.count({ where: { imageUrl: { not: null } } }),
-      ]);
-    } catch {
-      // Models might not exist or have data - that's okay
-    }
+    // Query each model independently so one failure doesn't affect others
+    try { hasEtymology = await prisma.etymology.count(); } catch { /* Model might not exist */ }
+    try { hasMnemonic = await prisma.mnemonic.count(); } catch { /* Model might not exist */ }
+    try { hasExamples = await prisma.example.count(); } catch { /* Model might not exist */ }
+    try { hasMedia = await prisma.wordImage.count(); } catch { /* Model might not exist */ }
+    try { hasWordVisuals = await prisma.wordVisual.count({ where: { imageUrl: { not: null } } }); } catch { /* Model might not exist */ }
 
     // Total media = WordImage + WordVisual with images
     const totalMedia = hasMedia + hasWordVisuals;
+
+    // Also count words that have at least one visual
+    let wordsWithVisuals = 0;
+    try {
+      wordsWithVisuals = await prisma.word.count({
+        where: { visuals: { some: { imageUrl: { not: null } } } }
+      });
+    } catch { /* Relation might not exist */ }
 
     // Convert category counts to Record
     const byExamCategory: Record<string, number> = {};
@@ -104,6 +107,10 @@ export const getDashboardStats = async (
         hasMnemonic,
         hasExamples,
         hasMedia: totalMedia, // WordImage + WordVisual combined
+        // Additional media stats for debugging
+        wordImageCount: hasMedia,
+        wordVisualCount: hasWordVisuals,
+        wordsWithVisuals, // Words that have at least one image
       },
     };
 
