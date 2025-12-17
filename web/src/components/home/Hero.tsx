@@ -82,14 +82,28 @@ export default function Hero() {
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">
-              <Link href="/study" className="btn btn-primary group">
-                <Icons.Play />
-                <span>학습 시작하기</span>
-              </Link>
-              <Link href="/words" className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5">
-                <Icons.BookOpen />
-                <span>단어장 둘러보기</span>
-              </Link>
+              {isLoggedIn ? (
+                <>
+                  <Link href="/study" className="btn btn-primary group">
+                    <Icons.Play />
+                    <span>학습 시작하기</span>
+                  </Link>
+                  <Link href="/review?exam=CSAT" className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5">
+                    <Icons.BookOpen />
+                    <span>복습하기</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/learn?exam=CSAT" className="btn btn-primary group">
+                    <Icons.Play />
+                    <span>무료로 체험하기</span>
+                  </Link>
+                  <Link href="/auth/login" className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5">
+                    <span>로그인</span>
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="flex gap-8 pt-8 border-t border-slate-200">
@@ -125,14 +139,14 @@ export default function Hero() {
               </div>
             ))}
 
-            {/* 비로그인 시: 가입 유도 카드 / 로그인 시: 학습 목표 카드 */}
+            {/* 비로그인 시: 체험 유도 카드 / 로그인 시: 학습 목표 카드 */}
             {!isLoggedIn ? (
-              <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-green-500 to-green-600 text-white">
+              <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-brand-primary to-brand-secondary text-white">
                 <div className="relative z-10">
-                  <h4 className="text-lg font-semibold mb-2">지금 시작하세요!</h4>
-                  <p className="text-white/80 mb-4">무료로 가입하고 {PLATFORM_STATS.totalWords.toLocaleString()}개 단어를 학습하세요</p>
-                  <Link href="/auth/register" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-green-600 hover:bg-white/90 rounded-lg font-medium transition-colors">
-                    <span>무료로 시작하기</span>
+                  <h4 className="text-lg font-semibold mb-2">60초 안에 체험해보세요!</h4>
+                  <p className="text-white/80 mb-4">로그인 없이 {PLATFORM_STATS.totalWords.toLocaleString()}개 단어로 학습 체험</p>
+                  <Link href="/learn?exam=CSAT" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-brand-primary hover:bg-white/90 rounded-lg font-medium transition-colors">
+                    <span>바로 체험하기</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
