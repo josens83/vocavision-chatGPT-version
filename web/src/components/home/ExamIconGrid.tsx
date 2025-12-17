@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { PLATFORM_STATS } from "@/constants/stats";
-import { useToast } from "@/components/ui/Toast";
+import { useComingSoon } from "@/components/ui/ComingSoonModal";
 
 interface ExamIcon {
   id: string;
@@ -127,13 +127,13 @@ function ExamIconCard({ exam, onComingSoonClick }: { exam: ExamIcon; onComingSoo
 }
 
 export default function ExamIconGrid() {
-  const { info } = useToast();
+  const { showComingSoon } = useComingSoon();
 
   const handleComingSoonClick = (examName: string) => {
-    info(
-      `${examName} 단어장 출시 예정`,
-      "현재 준비 중입니다. 곧 만나보실 수 있어요!"
-    );
+    showComingSoon({
+      itemName: `${examName} 단어장`,
+      message: `${examName} 단어장은 곧 추가될 예정이에요.\n조금만 기다려 주세요!`,
+    });
   };
 
   return (

@@ -9,6 +9,7 @@ import HeroCarousel from "./HeroCarousel";
 import { CategoryGrid, StudyTypeCard, ExamCategoryCard, examCategories } from "./CategoryCard";
 import PopularWordsSection, { sampleBestWords, sampleNewWords } from "./PopularWordsSection";
 import { SectionHeader } from "@/components/ui";
+import { useAuthRequired } from "@/components/ui/AuthRequiredModal";
 import { StreakCalendar, ContinueLearning } from "@/components/dashboard";
 import { PLATFORM_STATS, GUEST_SAMPLE_WORDS } from "@/constants/stats";
 import { useAuthStore } from "@/lib/store";
@@ -16,9 +17,9 @@ import { progressAPI } from "@/lib/api";
 
 // 비로그인용 학습 방법 (숫자 없이 설명만, 힌트 메시지 표시)
 const guestStudyTypes = [
-  { title: "플래시카드", description: "간격 반복으로 효율적 암기", type: "flashcard" as const, href: "/learn?exam=CSAT", guestHint: "로그인 후 확인" },
-  { title: "퀴즈 도전", description: "오답 기반 난이도 조절", type: "quiz" as const, href: "/quiz?exam=CSAT", guestHint: "로그인 후 확인" },
-  { title: "복습하기", description: "잊어버린 단어 다시 학습", type: "review" as const, href: "/review?exam=CSAT", guestHint: "로그인 후 확인" },
+  { title: "플래시카드", description: "간격 반복으로 효율적 암기", type: "flashcard" as const, href: "/learn?exam=CSAT", guestHint: "데모 가능" },
+  { title: "퀴즈 도전", description: "오답 기반 난이도 조절", type: "quiz" as const, href: "/quiz?exam=CSAT", guestHint: "데모 가능" },
+  { title: "복습하기", description: "잊어버린 단어 다시 학습", type: "review" as const, href: "/review", requiresAuth: true, guestHint: "로그인 필요" },
   { title: "단어장", description: "전체 단어 목록 보기", type: "vocabulary" as const, href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, countLabel: "총 단어" },
 ];
 
@@ -50,6 +51,7 @@ interface UserLearningStats {
 export default function HomePage() {
   const { user, _hasHydrated } = useAuthStore();
   const isLoggedIn = !!user;
+  const { showAuthRequired } = useAuthRequired();
 
   // 로그인 사용자용 학습 통계
   const [userStats, setUserStats] = useState<UserLearningStats | null>(null);
@@ -175,7 +177,15 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {getStudyTypes().map((type, index) => (
               <div key={type.title} className="opacity-0 animate-fade-in" style={{ animationDelay: `${index * 0.1}s`, animationFillMode: "forwards" }}>
-                <StudyTypeCard {...type} />
+                <StudyTypeCard
+                  {...type}
+                  onAuthRequired={type.requiresAuth ? () => showAuthRequired({
+                    title: '복습 기능은 로그인이 필요해요',
+                    message: '학습 기록을 기반으로 복습 추천을 받으려면 로그인해 주세요.',
+                    returnTo: '/review',
+                    features: ['학습 기록 저장', '간격 반복 복습 추천', '복습 통계 확인'],
+                  }) : undefined}
+                />
               </div>
             ))}
           </div>
