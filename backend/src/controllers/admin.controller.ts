@@ -1980,17 +1980,19 @@ export const stopImageGeneration = async (
       });
     }
 
-    // Set status to cancelled - the processing loop will check this and stop
-    job.status = 'cancelled';
+    // Set status to failed - the processing loop checks for 'processing' status and will stop
+    job.status = 'failed';
     job.currentWord = undefined;
+    job.errors.push({ word: 'SYSTEM', error: 'Job cancelled by user' });
 
-    logger.info(`[Admin/ImageGen] Job ${jobId} cancelled. Processed: ${job.processedWords}/${job.totalWords}`);
+    logger.info(`[Admin/ImageGen] Job ${jobId} cancelled by user. Processed: ${job.processedWords}/${job.totalWords}`);
 
     res.json({
       success: true,
       data: {
         jobId,
         message: 'Job cancelled successfully',
+        newStatus: job.status,
         processedWords: job.processedWords,
         totalWords: job.totalWords,
         successCount: job.successCount,
@@ -2083,8 +2085,21 @@ async function processImageBatch(
         const result = await generateAndUploadImage(prompt, visualType, word.word);
 
         if (result) {
-          await prisma.wordVisual.create({
-            data: {
+          // Use upsert to avoid unique constraint errors if visual already exists
+          await prisma.wordVisual.upsert({
+            where: {
+              wordId_type: {
+                wordId: word.id,
+                type: visualType,
+              },
+            },
+            update: {
+              imageUrl: result.imageUrl,
+              promptEn: prompt,
+              captionKo,
+              captionEn,
+            },
+            create: {
               wordId: word.id,
               type: visualType,
               imageUrl: result.imageUrl,

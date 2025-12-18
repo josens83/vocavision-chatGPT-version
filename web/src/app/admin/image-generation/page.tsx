@@ -185,11 +185,20 @@ export default function AdminImageGenerationPage() {
     // Call backend to stop the job
     if (currentJob?.id) {
       try {
-        await api.post(`/admin/image-generation/stop/${currentJob.id}`);
-        // Update local job status
-        setCurrentJob((prev) => prev ? { ...prev, status: 'cancelled' } : null);
+        const response = await api.post<{ success: boolean; data: { newStatus: string } }>(
+          `/admin/image-generation/stop/${currentJob.id}`
+        );
+        // Update local job status based on backend response
+        if (response.data.success) {
+          setCurrentJob((prev) => prev ? {
+            ...prev,
+            status: response.data.data.newStatus as BatchJobStatus['status']
+          } : null);
+        }
       } catch (err) {
         console.error('Failed to stop job:', err);
+        // Still update local status even if backend call fails
+        setCurrentJob((prev) => prev ? { ...prev, status: 'failed' } : null);
       }
     }
 
