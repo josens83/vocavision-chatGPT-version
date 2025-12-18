@@ -108,17 +108,23 @@ function CheckoutContent() {
 
     try {
       // 토스페이먼츠 결제창 호출
-      const { requestPayment } = await import("@/lib/payments/toss");
+      const { requestPaymentWithParams } = await import("@/lib/payments/toss");
 
-      // orderId 형식: vocavision_{userId}_{plan}_{billingCycle}_{timestamp}
-      const orderId = `vocavision_${user.id}_${selectedPlan}_${billingCycle}_${Date.now()}`;
+      // orderId 생성: 영문, 숫자, -, _ 만 허용 (6-64자)
+      // userId에서 안전한 문자만 추출
+      const safeUserId = user.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+      const orderId = `vv-${safeUserId}-${selectedPlan}-${billingCycle}-${Date.now()}`;
 
-      await requestPayment({
+      await requestPaymentWithParams({
         orderId,
         orderName: `VocaVision ${plan.name} (${billingCycle === "monthly" ? "월간" : "연간"})`,
         amount: price,
         customerEmail: user.email || undefined,
         customerName: user.name || "고객",
+        // successUrl에 plan 정보 추가
+        plan: selectedPlan,
+        billingCycle,
+        userId: user.id,
       });
     } catch (error) {
       console.error("결제 오류:", error);
@@ -244,25 +250,30 @@ function CheckoutContent() {
               </ul>
             </div>
 
-            {/* 약관 동의 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <label className="flex items-start gap-3 cursor-pointer">
+            {/* 약관 동의 - 강조된 디자인 */}
+            <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-5">
+              <label className="flex items-start gap-4 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={agreedToTerms}
                   onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="mt-1 w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="mt-0.5 w-6 h-6 rounded border-2 border-indigo-300 text-indigo-600 focus:ring-indigo-500 focus:ring-2 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-700">
-                  <Link href="/terms" className="text-indigo-600 hover:underline" target="_blank">
-                    이용약관
-                  </Link>
-                  {" "}및{" "}
-                  <Link href="/privacy" className="text-indigo-600 hover:underline" target="_blank">
-                    개인정보처리방침
-                  </Link>
-                  에 동의합니다. 정기 결제에 동의하며, 언제든지 해지할 수 있습니다.
-                </span>
+                <div className="text-sm leading-relaxed">
+                  <span className="text-gray-800 font-medium">
+                    <Link href="/terms" className="text-indigo-600 font-semibold hover:underline" target="_blank">
+                      이용약관
+                    </Link>
+                    {" "}및{" "}
+                    <Link href="/privacy" className="text-indigo-600 font-semibold hover:underline" target="_blank">
+                      개인정보처리방침
+                    </Link>
+                    에 동의합니다.
+                  </span>
+                  <p className="text-gray-600 mt-1.5">
+                    정기 결제에 동의하며, 언제든지 해지할 수 있습니다.
+                  </p>
+                </div>
               </label>
             </div>
           </div>

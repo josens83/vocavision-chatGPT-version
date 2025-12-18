@@ -15,6 +15,10 @@ function SuccessContent() {
   const paymentKey = searchParams.get("paymentKey");
   const orderId = searchParams.get("orderId");
   const amount = searchParams.get("amount");
+  // 추가 파라미터 (successUrl에서 전달)
+  const plan = searchParams.get("plan");
+  const billingCycle = searchParams.get("billingCycle");
+  const userId = searchParams.get("userId");
 
   useEffect(() => {
     async function processPayment() {
@@ -25,7 +29,16 @@ function SuccessContent() {
       }
 
       try {
-        const result = await confirmPayment(paymentKey, orderId, parseInt(amount, 10));
+        const result = await confirmPayment(
+          paymentKey,
+          orderId,
+          parseInt(amount, 10),
+          {
+            plan: plan || undefined,
+            billingCycle: billingCycle || undefined,
+            userId: userId || undefined,
+          }
+        );
 
         if (result.success) {
           setStatus("success");
@@ -41,7 +54,7 @@ function SuccessContent() {
     }
 
     processPayment();
-  }, [paymentKey, orderId, amount]);
+  }, [paymentKey, orderId, amount, plan, billingCycle, userId]);
 
   return (
     <div className="max-w-md w-full mx-auto px-4">
