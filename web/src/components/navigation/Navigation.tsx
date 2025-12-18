@@ -492,7 +492,7 @@ export default function Navigation() {
             </span>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-4">
             {(isAuthenticated ? authNavigationItems : guestNavigationItems).map((item) => (
               item.children ? (
                 <NavDropdown key={item.label} item={item} isOpen={openDropdown === item.label} onMouseEnter={() => setOpenDropdown(item.label)} onMouseLeave={() => setOpenDropdown(null)} />
@@ -500,7 +500,7 @@ export default function Navigation() {
                 // "준비중" 항목 (TEPS, TOEFL 등)
                 <button
                   key={item.label}
-                  className="nav-link flex items-center gap-1.5 text-slate-400 cursor-default"
+                  className="nav-link flex items-center gap-1.5 text-slate-400 cursor-default whitespace-nowrap"
                   onClick={() => {}}
                 >
                   <span>{item.label}</span>
