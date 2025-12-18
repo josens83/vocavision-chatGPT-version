@@ -48,3 +48,7 @@ export { useUserStats } from './useUserStats';
 
 // Search Hook
 export { useSearch, useDebounce } from './useSearch';
+
+// Animation & Accessibility Hooks
+export { useReducedMotion, useSimpleAnimations } from './useReducedMotion';
+export { useScrollReveal, useScrollProgress } from './useScrollReveal';
