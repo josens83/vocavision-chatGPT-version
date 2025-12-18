@@ -34,9 +34,9 @@ const Icons = {
   ),
 };
 
-// Hero 섹션 통계 (무료 플랜 기준)
+// Hero 섹션 통계 (수능 전체 기준)
 const stats = [
-  { label: "수능 필수", value: "1,000", suffix: "개+" },
+  { label: "수능 어휘", value: "3,000", suffix: "개+" },
   { label: "난이도 레벨", value: "3", suffix: "단계" },
   { label: "AI 이미지", value: "3", suffix: "종류/단어" },
 ];
@@ -57,13 +57,13 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[70vh] flex items-center overflow-hidden">
       <div className="absolute inset-0 hero-gradient hero-pattern" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-level-beginner/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-level-intermediate/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-level-advanced/5 rounded-full blur-3xl" />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-20">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className={`space-y-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-surface-border shadow-sm">
@@ -144,10 +144,10 @@ export default function Hero() {
               <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-brand-primary to-brand-secondary text-white">
                 <div className="relative z-10">
                   <h4 className="text-lg font-semibold mb-2">60초 안에 체험해보세요!</h4>
-                  <p className="text-white/80 mb-4">수능 필수 단어 1,000개 무료 체험</p>
-                  <Link href="/learn?exam=CSAT" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-brand-primary hover:bg-white/90 rounded-lg font-medium transition-colors">
+                  <p className="text-white/80 mb-4">수능 어휘 3,000개+ 무료 체험</p>
+                  <Link href="/learn?exam=CSAT" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-brand-primary hover:bg-white/90 rounded-lg font-medium transition-colors group">
                     <span>바로 체험하기</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
                   </Link>
@@ -159,9 +159,9 @@ export default function Hero() {
                 <div className="relative z-10">
                   <h4 className="text-lg font-semibold mb-2">오늘의 학습 목표</h4>
                   <p className="text-white/80 mb-4">새로운 단어 10개를 학습하고 복습 퀴즈를 완료해보세요!</p>
-                  <Link href="/quiz" className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                  <Link href="/quiz" className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors group">
                     <span>퀴즈 시작</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
                   </Link>
