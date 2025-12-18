@@ -36,6 +36,7 @@ interface TossPayments {
       customerName?: string;
       successUrl: string;
       failUrl: string;
+      useEscrow?: boolean;
     }
   ) => Promise<void>;
   requestBillingAuth: (
@@ -108,6 +109,7 @@ export async function requestPayment(request: PaymentRequest): Promise<void> {
     customerName: request.customerName,
     successUrl: SUCCESS_URL,
     failUrl: FAIL_URL,
+    useEscrow: false,  // 에스크로 비활성화 (일반 결제)
   });
 }
 
