@@ -32,23 +32,22 @@ export default function PromoBanner() {
   if (isPremium || !isVisible) return null;
 
   return (
-    <div className="bg-gradient-to-r from-brand-primary via-purple-600 to-brand-secondary text-white py-2.5 px-4 relative">
-      <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 sm:gap-4 text-sm">
-        <span className="animate-pulse hidden sm:inline">🎉</span>
-        <p className="text-center">
-          <strong className="hidden sm:inline">베이직 플랜 가입 시 프리미엄 7일 무료 체험!</strong>
-          <strong className="sm:hidden">7일 무료 체험!</strong>
-          <span className="hidden md:inline"> 수능 L1/L2/L3 전체 + AI 이미지 무제한</span>
+    <div className="bg-gradient-to-r from-brand-primary via-purple-600 to-brand-secondary text-white py-2 px-4 relative">
+      <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 text-sm pr-8">
+        <span className="animate-pulse hidden sm:inline flex-shrink-0">🎉</span>
+        <p className="text-center whitespace-nowrap overflow-hidden text-ellipsis">
+          <strong>프리미엄 7일 무료!</strong>
+          <span className="hidden sm:inline"> 수능 전체 + AI 이미지 무제한</span>
         </p>
         <Link
           href="/pricing"
-          className="bg-white text-brand-primary px-3 py-1 rounded-full text-xs font-bold hover:bg-gray-100 transition-colors whitespace-nowrap"
+          className="bg-white text-brand-primary px-3 py-1 rounded-full text-xs font-bold hover:bg-gray-100 transition-colors whitespace-nowrap flex-shrink-0"
         >
-          지금 시작 →
+          시작하기 →
         </Link>
         <button
           onClick={handleDismiss}
-          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-white/20 rounded-full transition-colors"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-white/20 rounded-full transition-colors"
           aria-label="배너 닫기"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
