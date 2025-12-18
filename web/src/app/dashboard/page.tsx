@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore, useExamCourseStore, ExamType } from '@/lib/store';
-import { progressAPI, wordsAPI } from '@/lib/api';
-import TabLayout from '@/components/layout/TabLayout';
+import { progressAPI } from '@/lib/api';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 import { SkeletonDashboard } from '@/components/ui/Skeleton';
 import { StatsOverview } from '@/components/dashboard';
 
@@ -17,41 +17,30 @@ const examInfo: Record<string, { name: string; icon: string; gradient: string; c
   TEPS: { name: 'TEPS', icon: '🎓', gradient: 'from-purple-500 to-purple-600', color: 'purple' },
 };
 
-// Level info with improved descriptions
+// Level info
 const levelInfo: Record<string, {
   name: string;
   description: string;
   target: string;
   wordCount: number;
-  details: string;
 }> = {
-  L1: {
-    name: '초급',
-    description: '기초 필수 단어 1,000개',
-    target: '수능 3등급 목표',
-    wordCount: 1000,
-    details: '가장 자주 출제되는 핵심 어휘',
-  },
-  L2: {
-    name: '중급',
-    description: '핵심 심화 단어 1,000개',
-    target: '수능 2등급 목표',
-    wordCount: 1000,
-    details: '2등급 도약을 위한 필수 어휘',
-  },
-  L3: {
-    name: '고급',
-    description: '고난도 단어 1,000개',
-    target: '수능 1등급 목표',
-    wordCount: 1000,
-    details: '1등급 완성을 위한 고급 어휘',
-  },
+  L1: { name: '초급', description: '기초 필수 단어', target: '3등급 목표', wordCount: 1000 },
+  L2: { name: '중급', description: '핵심 심화 단어', target: '2등급 목표', wordCount: 1000 },
+  L3: { name: '고급', description: '고난도 단어', target: '1등급 목표', wordCount: 1000 },
 };
+
+// Badge definitions
+const badges = [
+  { id: 'streak7', name: '7일 연속 학습', icon: '🔥', description: '7일 연속 학습 달성', condition: (stats: any) => stats?.currentStreak >= 7 },
+  { id: 'words100', name: '100단어 마스터', icon: '📚', description: '100개 단어 학습 완료', condition: (stats: any) => stats?.totalWordsLearned >= 100 },
+  { id: 'words500', name: '500단어 마스터', icon: '🎯', description: '500개 단어 학습 완료', condition: (stats: any) => stats?.totalWordsLearned >= 500 },
+];
 
 interface UserStats {
   totalWordsLearned: number;
   currentStreak: number;
   longestStreak: number;
+  lastActiveDate?: string;
 }
 
 export default function DashboardPage() {
@@ -65,10 +54,8 @@ export default function DashboardPage() {
   const [dueReviewCount, setDueReviewCount] = useState(0);
   const [selectedLevel, setSelectedLevel] = useState('L1');
   const [loading, setLoading] = useState(true);
-  const [showLevelTestBanner, setShowLevelTestBanner] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  // Get current month calendar data
+  // Calendar data
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
@@ -93,13 +80,8 @@ export default function DashboardPage() {
       setStats(progressData.stats);
       setDueReviewCount(reviewsData.count || 0);
 
-      // Load saved preferences
       const savedLevel = localStorage.getItem('selectedLevel');
       if (savedLevel) setSelectedLevel(savedLevel);
-
-      // Check if level test was completed
-      const levelTestCompleted = localStorage.getItem('levelTestCompleted');
-      setShowLevelTestBanner(levelTestCompleted !== 'true');
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -112,34 +94,32 @@ export default function DashboardPage() {
     localStorage.setItem('selectedLevel', level);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/words?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
   const selectedExam = activeExam || 'CSAT';
   const exam = examInfo[selectedExam];
   const level = levelInfo[selectedLevel];
 
-  // Calculate progress based on selected level
   const totalWords = level.wordCount;
   const learnedWords = stats?.totalWordsLearned || 0;
+  const remainingWords = Math.max(totalWords - learnedWords, 0);
   const progressPercent = Math.min(Math.round((learnedWords / totalWords) * 100), 100);
+
+  // Calculate estimated time (assuming 10 words per 3 minutes)
+  const estimatedMinutes = Math.ceil(dueReviewCount * 0.3);
 
   if (!hasHydrated || loading) {
     return (
-      <TabLayout>
+      <DashboardLayout>
         <SkeletonDashboard />
-      </TabLayout>
+      </DashboardLayout>
     );
   }
 
   return (
-    <TabLayout
-      headerRight={
-        <div className="flex items-center gap-3">
+    <DashboardLayout>
+      <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+        {/* 모바일 헤더 */}
+        <div className="lg:hidden mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900">대시보드</h1>
           <select
             value={selectedExam}
             onChange={(e) => setActiveExam(e.target.value as ExamType)}
@@ -150,309 +130,259 @@ export default function DashboardPage() {
             ))}
           </select>
         </div>
-      }
-    >
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        {/* Hero Section - Skillflo 스타일 */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            오늘도 영어 실력을 키워볼까요?
-          </h1>
-          <p className="text-gray-500">
-            매일 조금씩, 꾸준히 학습하면 실력이 쑥쑥 늘어요.
-          </p>
+
+        {/* P0-2: 오늘 해야 할 일 Hero (Fastcampus 스타일) */}
+        <div className="bg-gradient-to-r from-pink-500 to-pink-600 rounded-2xl p-6 mb-6 text-white shadow-lg shadow-pink-500/25">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-pink-100 text-sm mb-1">오늘의 할 일</p>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2">
+                {dueReviewCount > 0 ? (
+                  <>복습할 단어 <span className="text-yellow-300">{dueReviewCount}개</span></>
+                ) : (
+                  <>새로운 단어를 학습해보세요</>
+                )}
+              </h2>
+              {dueReviewCount > 0 ? (
+                <p className="text-pink-100">
+                  지금 시작하면 <strong className="text-white">{estimatedMinutes}분</strong>이면 끝나요
+                </p>
+              ) : (
+                <p className="text-pink-100">
+                  오늘 목표: 새 단어 <strong className="text-white">20개</strong> 학습하기
+                </p>
+              )}
+            </div>
+            <Link
+              href={dueReviewCount > 0 ? '/review' : `/learn?exam=${selectedExam}&level=${selectedLevel}`}
+              className="bg-white text-pink-600 px-8 py-4 rounded-xl font-bold text-center hover:bg-pink-50 transition shadow-lg whitespace-nowrap"
+            >
+              {dueReviewCount > 0 ? '복습 시작' : '학습 시작'}
+            </Link>
+          </div>
         </div>
 
-        {/* 단어 검색 */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="단어 검색..."
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 pl-10 focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none transition"
-              />
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+        {/* Quick Actions - Fastcampus 스타일 아이콘 네비 */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          <Link href="/review" className="bg-white rounded-xl p-4 text-center hover:bg-gray-50 transition border border-gray-100 shadow-sm">
+            <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <span className="text-xl">🔄</span>
             </div>
-            <button
-              type="submit"
-              className="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-xl font-medium transition"
-            >
-              검색
-            </button>
-          </div>
-        </form>
+            <span className="text-xs font-medium text-gray-700">오늘 복습</span>
+            {dueReviewCount > 0 && (
+              <span className="block text-xs text-orange-500 font-bold">{dueReviewCount}개</span>
+            )}
+          </Link>
+          <Link href="/words?filter=weak" className="bg-white rounded-xl p-4 text-center hover:bg-gray-50 transition border border-gray-100 shadow-sm">
+            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <span className="text-xl">🔥</span>
+            </div>
+            <span className="text-xs font-medium text-gray-700">약한 단어</span>
+          </Link>
+          <Link href={`/learn?exam=${selectedExam}&level=${selectedLevel}`} className="bg-white rounded-xl p-4 text-center hover:bg-gray-50 transition border border-gray-100 shadow-sm">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <span className="text-xl">🆕</span>
+            </div>
+            <span className="text-xs font-medium text-gray-700">새 단어</span>
+          </Link>
+          <Link href="/quiz" className="bg-white rounded-xl p-4 text-center hover:bg-gray-50 transition border border-gray-100 shadow-sm">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2">
+              <span className="text-xl">🎯</span>
+            </div>
+            <span className="text-xs font-medium text-gray-700">퀴즈</span>
+          </Link>
+        </div>
 
-        {/* 레벨 테스트 배너 - 첫 방문 사용자에게 표시 */}
-        {showLevelTestBanner && (
-          <div className="bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl p-6 mb-6 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 opacity-10">
-              <svg width="200" height="200" viewBox="0 0 200 200" fill="currentColor">
-                <circle cx="150" cy="50" r="100" />
-              </svg>
+        {/* 2열 그리드 (데스크탑) */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-6">
+          {/* P0-3: 이어서 학습 카드 (정보 밀도 개선) */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">바로 학습 이어가기</h2>
+              <span className="text-sm text-pink-500 font-medium">
+                🔥 {stats?.currentStreak || 0}일 연속
+              </span>
             </div>
-            <div className="relative">
-              <h3 className="text-lg font-bold mb-2">
-                나의 영단어 수준은? 🎯
-              </h3>
-              <p className="text-pink-100 text-sm mb-4">
-                맞춤 학습을 위해 간단한 테스트를 진행해보세요 (약 2분)
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/level-test"
-                  className="inline-flex items-center gap-2 bg-white text-pink-600 font-semibold px-4 py-2 rounded-lg hover:bg-pink-50 transition-colors"
-                >
-                  테스트 시작
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-                <button
-                  onClick={() => {
-                    localStorage.setItem('levelTestCompleted', 'true');
-                    setShowLevelTestBanner(false);
-                  }}
-                  className="text-pink-200 hover:text-white text-sm underline transition-colors"
-                >
-                  건너뛰기
-                </button>
+
+            <div className="flex items-center gap-4 mb-4">
+              <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${exam.gradient} flex items-center justify-center text-2xl flex-shrink-0`}>
+                {exam.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-gray-900">{exam.name} {level.name}</p>
+                <p className="text-sm text-gray-500">{level.description} • {level.target}</p>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* 이어서 학습 섹션 - FastCampus 스타일 */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">바로 학습을 이어갈까요?</h2>
-            <span className="text-sm text-pink-500 font-medium">
-              {stats?.currentStreak || 0}일 연속 학습 중
-            </span>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${exam.gradient} flex items-center justify-center text-2xl`}>
-                  {exam.icon}
+            {/* Progress Info - 분모/분자 밀도 */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <div className="grid grid-cols-3 gap-4 text-center mb-3">
+                <div>
+                  <p className="text-2xl font-bold text-blue-600">{learnedWords}</p>
+                  <p className="text-xs text-gray-500">학습 완료</p>
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">{exam.name} {level.name} 코스</p>
-                  <p className="text-sm text-gray-500">{level.description} • {level.target}</p>
+                  <p className="text-2xl font-bold text-gray-400">{remainingWords}</p>
+                  <p className="text-xs text-gray-500">남은 단어</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-500">{progressPercent}%</p>
+                  <p className="text-xs text-gray-500">진행률</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mb-3">{level.details}</p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
 
-              {/* Progress Bar */}
-              <div className="mb-2">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-500">학습 진도</span>
-                  <span className="font-medium text-blue-600">{learnedWords} / {totalWords} 단어</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div
-                    className="bg-blue-500 h-2 rounded-full transition-all"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
+            {/* 최근 학습 정보 */}
+            <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+              <span>마지막 학습: {stats?.lastActiveDate ? new Date(stats.lastActiveDate).toLocaleDateString('ko-KR') : '오늘'}</span>
+              <span>오늘 목표: 20개</span>
             </div>
 
             <Link
               href={`/learn?exam=${selectedExam.toLowerCase()}&level=${selectedLevel}`}
-              className="w-full md:w-auto bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded-xl font-bold text-center transition shadow-lg shadow-pink-500/25"
+              className="block w-full bg-pink-500 hover:bg-pink-600 text-white py-3 rounded-xl font-bold text-center transition"
             >
               이어서 학습
             </Link>
+          </div>
+
+          {/* P0-4: 연속 학습일 + 캘린더 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">연속 학습일</h2>
+              <span className="text-sm text-gray-500">{currentYear}년 {currentMonth + 1}월</span>
+            </div>
+
+            {/* 요약 카드 */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-orange-50 rounded-xl p-4 text-center">
+                <span className="text-2xl">🔥</span>
+                <p className="text-2xl font-bold text-orange-600">{stats?.currentStreak || 0}일</p>
+                <p className="text-xs text-gray-500">현재 연속</p>
+              </div>
+              <div className="bg-red-50 rounded-xl p-4 text-center">
+                <span className="text-2xl">🏆</span>
+                <p className="text-2xl font-bold text-red-600">{stats?.longestStreak || 0}일</p>
+                <p className="text-xs text-gray-500">최장 기록</p>
+              </div>
+            </div>
+
+            {/* 미니 캘린더 */}
+            <div className="grid grid-cols-7 gap-1 text-center text-xs mb-1">
+              {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
+                <div key={day} className="py-1 text-gray-400 font-medium">{day}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+                <div key={`empty-${i}`} className="aspect-square" />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const isToday = day === today.getDate();
+                const hasActivity = day <= today.getDate() && day > today.getDate() - (stats?.currentStreak || 0);
+
+                return (
+                  <div
+                    key={day}
+                    className={`aspect-square flex items-center justify-center rounded-lg text-xs ${
+                      isToday
+                        ? 'bg-pink-500 text-white font-bold'
+                        : hasActivity
+                        ? 'bg-pink-100 text-pink-600'
+                        : 'text-gray-400'
+                    }`}
+                  >
+                    {day}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 통계 3개 */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <p className="text-3xl font-bold text-blue-600">{stats?.totalWordsLearned || 0}</p>
+            <p className="text-sm text-gray-500">학습한 단어</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <p className="text-3xl font-bold text-orange-500">{stats?.currentStreak || 0}일</p>
+            <p className="text-sm text-gray-500">연속 학습</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <p className="text-3xl font-bold text-green-500">{dueReviewCount}</p>
+            <p className="text-sm text-gray-500">복습 대기</p>
           </div>
         </div>
 
         {/* 레벨 선택 */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">학습 레벨</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {Object.entries(levelInfo).map(([key, info]) => (
               <button
                 key={key}
                 onClick={() => handleLevelChange(key)}
-                className={`p-4 rounded-xl border-2 transition text-left ${
+                className={`p-4 rounded-xl border-2 transition text-center ${
                   selectedLevel === key
-                    ? 'border-blue-500 bg-blue-50'
+                    ? 'border-pink-500 bg-pink-50'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <p className={`font-bold ${selectedLevel === key ? 'text-blue-600' : 'text-gray-900'}`}>
-                    {info.name}
-                  </p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    selectedLevel === key ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {info.wordCount.toLocaleString()}개
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 mb-1">{info.description}</p>
-                <p className="text-xs text-gray-400">{info.details}</p>
+                <p className={`font-bold text-lg ${selectedLevel === key ? 'text-pink-600' : 'text-gray-900'}`}>
+                  {key}
+                </p>
+                <p className="text-sm text-gray-600">{info.name}</p>
+                <p className="text-xs text-gray-400">{info.wordCount.toLocaleString()}개</p>
               </button>
             ))}
           </div>
         </div>
 
-        {/* 학습 모드 선택 */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">학습 모드</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Link
-              href={`/learn?exam=${selectedExam.toLowerCase()}&level=${selectedLevel}`}
-              className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl text-center transition-colors"
-            >
-              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                <span className="text-xl">📖</span>
-              </div>
-              <span className="text-sm font-medium text-blue-700">플래시카드</span>
-            </Link>
-            <Link
-              href={`/quiz?exam=${selectedExam}&level=${selectedLevel}`}
-              className="p-4 bg-pink-50 hover:bg-pink-100 rounded-xl text-center transition-colors"
-            >
-              <div className="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center mx-auto mb-2">
-                <span className="text-xl">✅</span>
-              </div>
-              <span className="text-sm font-medium text-pink-700">4지선다 퀴즈</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* 연속 수강일 - FastCampus 스타일 캘린더 */}
+        {/* P1-1: 배지 섹션 */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">연속 학습일</h2>
-            <span className="text-sm text-gray-500">
-              {currentYear}년 {currentMonth + 1}월
-            </span>
+            <h2 className="text-lg font-bold text-gray-900">내 배지</h2>
+            <Link href="/achievements" className="text-sm text-pink-600 font-medium">전체 보기 →</Link>
           </div>
-
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Stats */}
-            <div className="flex-shrink-0 space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <span className="text-xl">🔥</span>
+          <div className="grid grid-cols-3 gap-3">
+            {badges.map((badge) => {
+              const isEarned = badge.condition(stats);
+              return (
+                <div
+                  key={badge.id}
+                  className={`p-4 rounded-xl text-center transition ${
+                    isEarned
+                      ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200'
+                      : 'bg-gray-50 opacity-50'
+                  }`}
+                >
+                  <span className={`text-3xl ${!isEarned && 'grayscale'}`}>{badge.icon}</span>
+                  <p className={`text-sm font-medium mt-2 ${isEarned ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {badge.name}
+                  </p>
+                  {!isEarned && (
+                    <p className="text-xs text-gray-400 mt-1">미획득</p>
+                  )}
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats?.currentStreak || 0}일</p>
-                  <p className="text-xs text-gray-500">현재 연속 학습일</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <span className="text-xl">🏆</span>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{stats?.longestStreak || 0}일</p>
-                  <p className="text-xs text-gray-500">최장 기록</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Calendar */}
-            <div className="flex-1">
-              <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
-                {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
-                  <div key={day} className="py-1">{day}</div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {/* Empty cells for first day offset */}
-                {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-                  <div key={`empty-${i}`} className="aspect-square" />
-                ))}
-                {/* Days of month */}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                  const day = i + 1;
-                  const isToday = day === today.getDate();
-                  const isSunday = (firstDayOfMonth + i) % 7 === 0;
-                  const isSaturday = (firstDayOfMonth + i) % 7 === 6;
-                  // Mock: assume recent days have activity
-                  const hasActivity = day <= today.getDate() && day > today.getDate() - (stats?.currentStreak || 0);
-
-                  return (
-                    <div
-                      key={day}
-                      className={`aspect-square flex items-center justify-center rounded-lg text-sm ${
-                        isToday
-                          ? 'bg-blue-500 text-white font-bold'
-                          : hasActivity
-                          ? 'bg-blue-100 text-blue-700'
-                          : isSunday
-                          ? 'text-red-400'
-                          : isSaturday
-                          ? 'text-blue-400'
-                          : 'text-gray-600'
-                      }`}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* 학습 통계 */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">학습 통계</h2>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            <div className="text-center p-4 bg-gray-50 rounded-xl">
-              <p className="text-3xl font-bold text-blue-600">{stats?.totalWordsLearned || 0}</p>
-              <p className="text-sm text-gray-500 mt-1">학습한 단어</p>
-            </div>
-            <div className="text-center p-4 bg-gray-50 rounded-xl">
-              <p className="text-3xl font-bold text-orange-500">{stats?.currentStreak || 0}일</p>
-              <p className="text-sm text-gray-500 mt-1">연속 학습</p>
-            </div>
-            <div className="text-center p-4 bg-gray-50 rounded-xl">
-              <p className="text-3xl font-bold text-green-500">{dueReviewCount}</p>
-              <p className="text-sm text-gray-500 mt-1">복습 대기</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 상세 학습 통계 */}
+        {/* 상세 통계 */}
         <div className="mb-6">
           <StatsOverview exam={selectedExam} />
         </div>
-
-        {/* 복습 알림 */}
-        {dueReviewCount > 0 && (
-          <Link
-            href="/review"
-            className="block bg-yellow-50 border border-yellow-200 rounded-2xl p-5 hover:bg-yellow-100 transition"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-3xl">📚</span>
-                <div>
-                  <p className="font-bold text-gray-900">복습할 단어가 {dueReviewCount}개 있어요!</p>
-                  <p className="text-sm text-gray-600">지금 복습하면 기억이 더 오래 남아요</p>
-                </div>
-              </div>
-              <span className="text-2xl text-gray-400">→</span>
-            </div>
-          </Link>
-        )}
       </div>
-    </TabLayout>
+    </DashboardLayout>
   );
 }
