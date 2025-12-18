@@ -25,6 +25,12 @@ interface PaymentRequest {
   customerName?: string;
 }
 
+interface PaymentRequestWithParams extends PaymentRequest {
+  plan: string;
+  billingCycle: string;
+  userId: string;
+}
+
 interface TossPayments {
   requestPayment: (
     method: string,
@@ -114,6 +120,28 @@ export async function requestPayment(request: PaymentRequest): Promise<void> {
 }
 
 /**
+ * 결제 요청 (plan/billingCycle/userId 포함)
+ * successUrl에 추가 파라미터를 포함하여 백엔드에서 사용자 정보 확인 가능
+ */
+export async function requestPaymentWithParams(request: PaymentRequestWithParams): Promise<void> {
+  const tossPayments = await loadTossPaymentsSDK();
+
+  // successUrl에 plan, billingCycle, userId 파라미터 추가
+  const successUrlWithParams = `${SUCCESS_URL}?plan=${request.plan}&billingCycle=${request.billingCycle}&userId=${encodeURIComponent(request.userId)}`;
+
+  await tossPayments.requestPayment("카드", {
+    amount: request.amount,
+    orderId: request.orderId,
+    orderName: request.orderName,
+    customerEmail: request.customerEmail,
+    customerName: request.customerName,
+    successUrl: successUrlWithParams,
+    failUrl: FAIL_URL,
+    useEscrow: false,  // 에스크로 비활성화 (일반 결제)
+  });
+}
+
+/**
  * 빌링키 발급 요청 (정기결제용)
  * 카드 정보를 등록하고 빌링키를 발급받습니다.
  */
@@ -134,7 +162,12 @@ export async function requestBillingAuth(customerKey: string): Promise<void> {
 export async function confirmPayment(
   paymentKey: string,
   orderId: string,
-  amount: number
+  amount: number,
+  additionalParams?: {
+    plan?: string;
+    billingCycle?: string;
+    userId?: string;
+  }
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     // 백엔드 API URL
@@ -164,6 +197,9 @@ export async function confirmPayment(
         paymentKey,
         orderId,
         amount,
+        ...(additionalParams?.plan && { plan: additionalParams.plan }),
+        ...(additionalParams?.billingCycle && { billingCycle: additionalParams.billingCycle }),
+        ...(additionalParams?.userId && { userId: additionalParams.userId }),
       }),
     });
 

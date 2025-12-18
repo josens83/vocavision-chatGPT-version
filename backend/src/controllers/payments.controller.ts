@@ -84,26 +84,26 @@ export const confirmPayment = async (
       });
     }
 
-    // 2. orderId에서 정보 파싱
-    // orderId 형식: vocavision_{userId}_{plan}_{billingCycle}_{timestamp}
-    const orderParts = orderId.split('_');
-    let userId: string | undefined;
-    let plan = 'basic';
-    let billingCycle = 'monthly';
+    // 2. 요청에서 직접 전달받은 파라미터 우선 사용
+    let userId = req.body.userId || req.userId;
+    let plan = req.body.plan || 'basic';
+    let billingCycle = req.body.billingCycle || 'monthly';
 
-    if (orderParts[0] === 'vocavision' && orderParts.length >= 5) {
-      userId = orderParts[1];
-      plan = orderParts[2] || 'basic';
-      billingCycle = orderParts[3] || 'monthly';
-    } else {
-      // 이전 형식 orderId (order-xxx) 또는 인증된 사용자의 경우
-      userId = req.userId;
+    // orderId에서 정보 파싱 (fallback)
+    // orderId 형식: vv-{safeUserId}-{plan}-{billingCycle}-{timestamp}
+    if (!userId) {
+      const orderParts = orderId.split('-');
+      if (orderParts[0] === 'vv' && orderParts.length >= 5) {
+        // vv-safeUserId-plan-billingCycle-timestamp 형식
+        plan = req.body.plan || orderParts[2] || plan;
+        billingCycle = req.body.billingCycle || orderParts[3] || billingCycle;
+      }
     }
 
     if (!userId) {
       return res.status(400).json({
         success: false,
-        error: 'User ID not found in orderId. Expected format: vocavision_{userId}_{plan}_{billingCycle}_{timestamp}',
+        error: 'User ID is required. Please provide userId in request body.',
       });
     }
 
