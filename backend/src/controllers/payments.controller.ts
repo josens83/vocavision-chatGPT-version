@@ -139,10 +139,21 @@ export const confirmPayment = async (
 
     // 4. 토스페이먼츠 결제 승인 API 호출
     try {
+      // amount를 반드시 숫자로 변환 (문자열로 전송 시 에러 발생)
+      const numericAmount = typeof amount === 'string' ? parseInt(amount, 10) : amount;
+
+      // 디버그 로깅
+      logger.info(`[Payments] Calling Toss confirm API with:`, {
+        paymentKey: paymentKey ? `${paymentKey.substring(0, 10)}...` : 'missing',
+        orderId,
+        amount: numericAmount,
+        amountType: typeof numericAmount,
+      });
+
       const tossResponse = await callTossAPI('/payments/confirm', 'POST', {
         paymentKey,
         orderId,
-        amount,
+        amount: numericAmount,
       });
 
       logger.info(`[Payments] Toss confirm success:`, tossResponse.status);
