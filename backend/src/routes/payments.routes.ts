@@ -51,8 +51,6 @@ router.post('/prepare', authenticateToken, preparePayment);
  *   post:
  *     summary: 결제 승인 (토스페이먼츠 결제 완료 후)
  *     tags: [Payments]
- *     security:
- *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -77,7 +75,8 @@ router.post('/prepare', authenticateToken, preparePayment);
  *       200:
  *         description: 결제 승인 완료
  */
-router.post('/confirm', authenticateToken, confirmPayment);
+// 결제 승인은 인증 없이 허용 (토스페이먼츠가 paymentKey로 검증함)
+router.post('/confirm', confirmPayment);
 
 /**
  * @swagger
