@@ -82,10 +82,10 @@ function SuccessContent() {
             </p>
             <div className="space-y-3">
               <Link
-                href="/learn"
+                href="/mypage"
                 className="block w-full py-3 px-6 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors"
               >
-                학습 시작하기
+                내 구독 확인하기
               </Link>
               <Link
                 href="/"
