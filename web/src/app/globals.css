@@ -777,3 +777,33 @@
   opacity: 1;
   transform: translateY(0);
 }
+
+/* ============================================
+   3D Transform Utilities (FlipCard, etc.)
+   ============================================ */
+.perspective-500 { perspective: 500px; }
+.perspective-1000 { perspective: 1000px; }
+.perspective-1500 { perspective: 1500px; }
+
+.preserve-3d { transform-style: preserve-3d; }
+.flat { transform-style: flat; }
+
+.backface-visible { backface-visibility: visible; }
+.backface-hidden { backface-visibility: hidden; }
+
+.rotate-y-0 { transform: rotateY(0deg); }
+.rotate-y-180 { transform: rotateY(180deg); }
+
+/* ============================================
+   Reduced Motion (Accessibility)
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
