@@ -1,6 +1,10 @@
-'use client';
-
+import { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: '문의하기',
+  description: 'VocaVision 고객 지원 및 문의 안내. 이메일, 전화로 문의하세요.',
+};
 
 const contactInfo = [
   {

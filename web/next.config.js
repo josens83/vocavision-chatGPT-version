@@ -1,5 +1,14 @@
 /** @type {import('next').NextConfig} */
 
+// Sentry configuration (optional - only if @sentry/nextjs is installed)
+let withSentryConfig;
+try {
+  withSentryConfig = require('@sentry/nextjs').withSentryConfig;
+} catch (e) {
+  // @sentry/nextjs not installed, skip Sentry integration
+  withSentryConfig = null;
+}
+
 // Phase 3-1: Bundle Optimization - Netflix/Google level
 const nextConfig = {
   output: 'standalone',
@@ -148,4 +157,17 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Sentry options
+const sentryWebpackPluginOptions = {
+  // Suppresses all logs
+  silent: true,
+  // Upload source maps for better error tracking
+  hideSourceMaps: true,
+  // Disable logger to reduce noise
+  disableLogger: true,
+};
+
+// Export with or without Sentry wrapper
+module.exports = withSentryConfig
+  ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
+  : nextConfig;
