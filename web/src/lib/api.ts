@@ -379,6 +379,30 @@ export const progressAPI = {
     const response = await api.post('/progress/session/end', data);
     return response.data;
   },
+  // 오늘의 진행도 조회
+  getTodayProgress: async () => {
+    try {
+      const response = await api.get('/progress/today');
+      return response.data;
+    } catch {
+      // API가 없으면 기본값 반환
+      return {
+        newWords: { current: 0, goal: 10 },
+        review: { current: 0, goal: 15 },
+        quiz: { score: 0, total: 0 },
+      };
+    }
+  },
+  // 최근 학습 단어 조회
+  getRecentWords: async (limit = 5) => {
+    try {
+      const response = await api.get('/progress/recent-words', { params: { limit } });
+      return response.data;
+    } catch {
+      // API가 없으면 빈 배열 반환
+      return { words: [] };
+    }
+  },
 };
 
 // Subscription API
