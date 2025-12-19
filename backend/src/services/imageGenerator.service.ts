@@ -16,7 +16,7 @@ const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
 // Visual type configurations
 const VISUAL_CONFIGS = {
   CONCEPT: {
-    style: 'cute cartoon illustration, Pixar style, bright vibrant colors, friendly, educational',
+    style: 'cute 3D cartoon illustration, bright vibrant colors, soft lighting, friendly and approachable, educational',
     negativePrompt: 'text, words, letters, alphabet, typography, writing, captions, labels, watermark, signature, blurry, numbers, characters, font, handwriting, title, subtitle, realistic, photograph, dark, scary',
   },
   MNEMONIC: {
@@ -198,9 +198,9 @@ export async function generateAndUploadImage(
 // ---------------------------------------------
 
 export function generateConceptPrompt(definitionEn: string, word: string): string {
-  // Pixar/Disney cartoon style for intuitive understanding
-  return `A 1:1 square cute cartoon illustration showing the meaning of "${word}" which means "${definitionEn || word}".
-Style: Pixar-like 3D cartoon, bright vibrant colors, friendly character design, simple clean composition, educational and memorable.
+  // Cute 3D cartoon style for intuitive understanding (no trademarked terms)
+  return `A 1:1 square cute 3D cartoon illustration showing the meaning of "${word}" which means "${definitionEn || word}".
+Style: whimsical 3D animated style, bright vibrant colors, soft lighting, friendly character design, simple clean composition, white background, educational and memorable.
 The image should help language learners instantly understand and remember the word meaning through clear visual storytelling.
 CRITICAL: Absolutely NO text, NO letters, NO words, NO writing anywhere in the image. Pure visual illustration only.`;
 }

@@ -38,7 +38,7 @@ const WORD_DELAY_MS = 1000; // 1 second between words
 // Visual type configurations
 const VISUAL_CONFIGS = {
   CONCEPT: {
-    style: 'cute cartoon illustration, Pixar style, bright vibrant colors, friendly, educational',
+    style: 'cute 3D cartoon illustration, bright vibrant colors, soft lighting, friendly and approachable, educational',
     negativePrompt: 'text, words, letters, alphabet, typography, writing, captions, labels, watermark, signature, blurry, numbers, characters, font, handwriting, title, subtitle, realistic, photograph, dark, scary',
     labelEn: 'Concept',
     labelKo: '의미',
@@ -137,7 +137,7 @@ async function generateSmartContent(
 
   if (type === 'CONCEPT') {
     return {
-      prompt: `A 1:1 square cute cartoon illustration showing the meaning of "${wordData.word}" which means "${wordData.definition}". Style: Pixar-like 3D cartoon, bright vibrant colors, friendly character design, simple clean composition, educational and memorable. The image should help language learners instantly understand and remember the word meaning. CRITICAL: Absolutely NO text, NO letters, NO words, NO writing anywhere in the image. Pure visual illustration only.`,
+      prompt: `A 1:1 square cute 3D cartoon illustration showing the meaning of "${wordData.word}" which means "${wordData.definition}". Style: whimsical 3D animated style, bright vibrant colors, soft lighting, friendly character design, simple clean composition, white background, educational and memorable. The image should help language learners instantly understand and remember the word meaning. CRITICAL: Absolutely NO text, NO letters, NO words, NO writing anywhere in the image. Pure visual illustration only.`,
       captionKo: wordData.definitionKo || `${wordData.word}의 의미`,
       captionEn: wordData.definition,
     };
