@@ -1,6 +1,10 @@
-'use client';
-
+import { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: '이용약관',
+  description: 'VocaVision 서비스 이용약관을 확인하세요.',
+};
 
 export default function TermsPage() {
   return (

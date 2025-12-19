@@ -1,0 +1,10 @@
+# VocaVision robots.txt
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://vocavision-web.vercel.app/sitemap.xml
