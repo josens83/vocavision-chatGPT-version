@@ -1787,9 +1787,9 @@ router.get('/seed-teps-smart', async (req: Request, res: Response) => {
     logger.info(`[Internal/SmartSeed] Starting TEPS ${level} smart seed: ${allWords.length} total words, batchSize=${batchSize}`);
 
     // Check which words already exist in TEPS (active, not archived)
+    // 모든 TEPS 단어를 가져와서 JavaScript에서 비교 (대소문자 무시)
     const existingTepsWords = await prisma.word.findMany({
       where: {
-        word: { in: allWords.map(w => w.toLowerCase()) },
         examCategory: 'TEPS',
         status: { not: 'ARCHIVED' },
       },
