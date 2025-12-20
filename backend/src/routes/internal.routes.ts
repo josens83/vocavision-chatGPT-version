@@ -2313,6 +2313,143 @@ router.get('/activate-teps-words', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /internal/reassign-teps-levels?key=YOUR_SECRET&priority=highest
+ * 기존 TEPS 단어들의 레벨만 재배정 (콘텐츠/이미지 유지)
+ * - priority=highest: 여러 레벨에 있으면 가장 높은 레벨로 (L3 > L2 > L1)
+ * - priority=lowest: 여러 레벨에 있으면 가장 낮은 레벨로 (L1 > L2 > L3)
+ */
+router.get('/reassign-teps-levels', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
+      return res.status(403).json({ error: 'Forbidden: Invalid key' });
+    }
+
+    const dryRun = req.query.dryRun === 'true';
+    const priority = (req.query.priority as string) || 'highest'; // 'highest' or 'lowest'
+
+    // Load TEPS words
+    const tepsData = loadTepsWords();
+    const l1Words = new Set(tepsData.levels.L1.words.map(w => w.toLowerCase().trim()));
+    const l2Words = new Set(tepsData.levels.L2.words.map(w => w.toLowerCase().trim()));
+    const l3Words = new Set(tepsData.levels.L3.words.map(w => w.toLowerCase().trim()));
+
+    logger.info(`[Internal/Reassign] Starting TEPS level reassignment (priority=${priority}, dryRun=${dryRun})`);
+
+    // Get all active TEPS words
+    const tepsWords = await prisma.word.findMany({
+      where: {
+        examCategory: 'TEPS',
+        status: { not: 'ARCHIVED' },
+      },
+      select: { id: true, word: true, level: true },
+    });
+
+    logger.info(`[Internal/Reassign] Found ${tepsWords.length} active TEPS words`);
+
+    const result = {
+      totalWords: tepsWords.length,
+      updated: { L1: 0, L2: 0, L3: 0 },
+      unchanged: 0,
+      notInList: 0,
+      errors: [] as string[],
+      details: [] as { word: string; from: string | null; to: string }[],
+    };
+
+    for (const word of tepsWords) {
+      const normalized = word.word.toLowerCase().trim();
+
+      // Determine target level based on priority
+      let targetLevel: string | null = null;
+
+      const inL1 = l1Words.has(normalized);
+      const inL2 = l2Words.has(normalized);
+      const inL3 = l3Words.has(normalized);
+
+      if (priority === 'highest') {
+        // L3 > L2 > L1 (assign to highest level)
+        if (inL3) targetLevel = 'L3';
+        else if (inL2) targetLevel = 'L2';
+        else if (inL1) targetLevel = 'L1';
+      } else {
+        // L1 > L2 > L3 (assign to lowest level)
+        if (inL1) targetLevel = 'L1';
+        else if (inL2) targetLevel = 'L2';
+        else if (inL3) targetLevel = 'L3';
+      }
+
+      if (!targetLevel) {
+        result.notInList++;
+        continue;
+      }
+
+      if (word.level === targetLevel) {
+        result.unchanged++;
+        continue;
+      }
+
+      if (dryRun) {
+        result.details.push({ word: normalized, from: word.level, to: targetLevel });
+        result.updated[targetLevel as 'L1' | 'L2' | 'L3']++;
+        continue;
+      }
+
+      try {
+        // Update word level
+        await prisma.word.update({
+          where: { id: word.id },
+          data: { level: targetLevel },
+        });
+
+        // Also update WordExamLevel if exists
+        await prisma.wordExamLevel.updateMany({
+          where: { wordId: word.id, examCategory: 'TEPS' },
+          data: { level: targetLevel },
+        });
+
+        result.updated[targetLevel as 'L1' | 'L2' | 'L3']++;
+        result.details.push({ word: normalized, from: word.level, to: targetLevel });
+
+      } catch (error: any) {
+        result.errors.push(`${normalized}: ${error.message}`);
+      }
+    }
+
+    logger.info(`[Internal/Reassign] Completed: L1=${result.updated.L1}, L2=${result.updated.L2}, L3=${result.updated.L3}, unchanged=${result.unchanged}`);
+
+    // Get final counts by level
+    const finalCounts = await prisma.word.groupBy({
+      by: ['level'],
+      where: { examCategory: 'TEPS', status: { not: 'ARCHIVED' } },
+      _count: { level: true },
+    });
+
+    res.json({
+      message: `TEPS level reassignment ${dryRun ? '(DRY RUN) ' : ''}completed`,
+      dryRun,
+      priority,
+      summary: {
+        totalWords: result.totalWords,
+        updated: result.updated,
+        totalUpdated: result.updated.L1 + result.updated.L2 + result.updated.L3,
+        unchanged: result.unchanged,
+        notInList: result.notInList,
+        errors: result.errors.length,
+      },
+      finalCounts: finalCounts.reduce((acc, c) => {
+        acc[c.level || 'unknown'] = c._count.level;
+        return acc;
+      }, {} as Record<string, number>),
+      errors: result.errors.slice(0, 20),
+      details: dryRun ? result.details.slice(0, 50) : undefined,
+    });
+  } catch (error) {
+    console.error('[Internal/Reassign] Error:', error);
+    res.status(500).json({ error: 'Reassignment failed', details: String(error) });
+  }
+});
+
+/**
  * GET /internal/teps-seed-status?key=YOUR_SECRET
  * TEPS 시드 현황 확인
  */
