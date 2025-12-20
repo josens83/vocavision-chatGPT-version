@@ -2606,13 +2606,19 @@ router.get('/generate-teps-content-smart', async (req: Request, res: Response) =
               create: {
                 wordId: word.id,
                 origin: sourceWord.etymology.origin,
-                components: sourceWord.etymology.components || [],
-                story: sourceWord.etymology.story,
+                language: sourceWord.etymology.language,
+                rootWords: sourceWord.etymology.rootWords || [],
+                evolution: sourceWord.etymology.evolution,
+                relatedWords: sourceWord.etymology.relatedWords || [],
+                breakdown: sourceWord.etymology.breakdown,
               },
               update: {
                 origin: sourceWord.etymology.origin,
-                components: sourceWord.etymology.components || [],
-                story: sourceWord.etymology.story,
+                language: sourceWord.etymology.language,
+                rootWords: sourceWord.etymology.rootWords || [],
+                evolution: sourceWord.etymology.evolution,
+                relatedWords: sourceWord.etymology.relatedWords || [],
+                breakdown: sourceWord.etymology.breakdown,
               },
             });
           }
@@ -2622,9 +2628,10 @@ router.get('/generate-teps-content-smart', async (req: Request, res: Response) =
             await prisma.mnemonic.create({
               data: {
                 wordId: word.id,
-                type: mnemonic.type,
+                title: mnemonic.title,
                 content: mnemonic.content,
-                hint: mnemonic.hint,
+                koreanHint: mnemonic.koreanHint,
+                source: mnemonic.source,
               },
             });
           }
@@ -2636,7 +2643,7 @@ router.get('/generate-teps-content-smart', async (req: Request, res: Response) =
                 wordId: word.id,
                 sentence: example.sentence,
                 translation: example.translation,
-                context: example.context,
+                source: example.source,
               },
             });
           }
@@ -2647,8 +2654,8 @@ router.get('/generate-teps-content-smart', async (req: Request, res: Response) =
               data: {
                 wordId: word.id,
                 phrase: collocation.phrase,
-                meaning: collocation.meaning,
-                example: collocation.example,
+                translation: collocation.translation,
+                exampleEn: collocation.exampleEn,
               },
             });
           }
