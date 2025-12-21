@@ -3730,4 +3730,391 @@ router.get('/update-package-duration', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================
+// Word Pool Migration Endpoints
+// ============================================
+
+/**
+ * 마이그레이션 Dry-run: 중복 단어 분석
+ * GET /internal/migrate-word-pool?key=xxx&dryRun=true
+ */
+router.get('/migrate-word-pool', async (req, res) => {
+  const { key, dryRun } = req.query;
+
+  if (key !== INTERNAL_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Step 1: 모든 Word 레코드 조회
+    const allWords = await prisma.word.findMany({
+      select: {
+        id: true,
+        word: true,
+        examCategory: true,
+        level: true,
+        status: true,
+        aiGeneratedAt: true,
+        definition: true,
+        definitionKo: true,
+        createdAt: true,
+      },
+      orderBy: { word: 'asc' },
+    });
+
+    // Step 2: 단어별로 그룹화 (대소문자 무시)
+    const wordGroups = new Map<string, typeof allWords>();
+    for (const w of allWords) {
+      const key = w.word.toLowerCase().trim();
+      if (!wordGroups.has(key)) {
+        wordGroups.set(key, []);
+      }
+      wordGroups.get(key)!.push(w);
+    }
+
+    // Step 3: 통계 계산
+    const stats = {
+      totalRecords: allWords.length,
+      uniqueWords: wordGroups.size,
+      duplicates: [] as Array<{
+        word: string;
+        count: number;
+        records: Array<{
+          id: string;
+          examCategory: string;
+          level: string | null;
+          status: string;
+          hasAiContent: boolean;
+          isMaster: boolean;
+        }>;
+      }>,
+      duplicatesToMerge: 0,
+      examLevelsToCreate: 0,
+    };
+
+    // Step 4: 중복 분석
+    for (const [wordText, records] of wordGroups) {
+      if (records.length > 1) {
+        // 마스터 선정 로직
+        const sorted = [...records].sort((a, b) => {
+          // 1. AI 콘텐츠 있는 것 우선
+          if (a.aiGeneratedAt && !b.aiGeneratedAt) return -1;
+          if (!a.aiGeneratedAt && b.aiGeneratedAt) return 1;
+          // 2. PUBLISHED 우선
+          if (a.status === 'PUBLISHED' && b.status !== 'PUBLISHED') return -1;
+          if (a.status !== 'PUBLISHED' && b.status === 'PUBLISHED') return 1;
+          // 3. 정의가 더 긴 것 우선
+          const aDefLen = (a.definition?.length || 0) + (a.definitionKo?.length || 0);
+          const bDefLen = (b.definition?.length || 0) + (b.definitionKo?.length || 0);
+          if (aDefLen !== bDefLen) return bDefLen - aDefLen;
+          // 4. 먼저 생성된 것 우선
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+
+        const masterId = sorted[0].id;
+
+        stats.duplicates.push({
+          word: wordText,
+          count: records.length,
+          records: records.map((r) => ({
+            id: r.id,
+            examCategory: r.examCategory,
+            level: r.level,
+            status: r.status,
+            hasAiContent: !!r.aiGeneratedAt,
+            isMaster: r.id === masterId,
+          })),
+        });
+        stats.duplicatesToMerge += records.length - 1;
+      }
+      stats.examLevelsToCreate += records.length;
+    }
+
+    // Dry-run 응답
+    res.json({
+      dryRun: true,
+      stats: {
+        totalRecords: stats.totalRecords,
+        uniqueWords: stats.uniqueWords,
+        duplicatesToMerge: stats.duplicatesToMerge,
+        examLevelsToCreate: stats.examLevelsToCreate,
+        expectedFinalWordCount: stats.uniqueWords,
+      },
+      sampleDuplicates: stats.duplicates.slice(0, 30),
+      duplicateCount: stats.duplicates.length,
+    });
+  } catch (error) {
+    console.error('[Internal/MigrateWordPool] Error:', error);
+    res.status(500).json({ error: 'Migration analysis failed' });
+  }
+});
+
+/**
+ * 실제 마이그레이션 실행
+ * POST /internal/migrate-word-pool?key=xxx
+ */
+router.post('/migrate-word-pool', async (req, res) => {
+  const { key } = req.query;
+
+  if (key !== INTERNAL_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Step 1: 모든 Word 레코드 조회
+    const allWords = await prisma.word.findMany({
+      orderBy: { word: 'asc' },
+    });
+
+    // Step 2: 단어별로 그룹화
+    const wordGroups = new Map<string, typeof allWords>();
+    for (const w of allWords) {
+      const key = w.word.toLowerCase().trim();
+      if (!wordGroups.has(key)) {
+        wordGroups.set(key, []);
+      }
+      wordGroups.get(key)!.push(w);
+    }
+
+    const stats = {
+      totalRecords: allWords.length,
+      uniqueWords: wordGroups.size,
+      examLevelsCreated: 0,
+      duplicatesMerged: 0,
+      errors: [] as string[],
+    };
+
+    // Step 3: WordExamLevel 생성 (기존 데이터 마이그레이션)
+    for (const [wordText, records] of wordGroups) {
+      try {
+        if (records.length === 1) {
+          // 중복 없음: WordExamLevel만 생성
+          const record = records[0];
+          await prisma.wordExamLevel.upsert({
+            where: {
+              wordId_examCategory: {
+                wordId: record.id,
+                examCategory: record.examCategory,
+              },
+            },
+            create: {
+              wordId: record.id,
+              examCategory: record.examCategory,
+              level: record.level || 'L1',
+              status: record.status,
+              frequency: record.frequency || 0,
+            },
+            update: {
+              level: record.level || 'L1',
+              status: record.status,
+              frequency: record.frequency || 0,
+            },
+          });
+          stats.examLevelsCreated++;
+        } else {
+          // 중복 있음: 마스터 선정 후 병합
+          const sorted = [...records].sort((a, b) => {
+            if (a.aiGeneratedAt && !b.aiGeneratedAt) return -1;
+            if (!a.aiGeneratedAt && b.aiGeneratedAt) return 1;
+            if (a.status === 'PUBLISHED' && b.status !== 'PUBLISHED') return -1;
+            if (a.status !== 'PUBLISHED' && b.status === 'PUBLISHED') return 1;
+            const aDefLen = (a.definition?.length || 0) + (a.definitionKo?.length || 0);
+            const bDefLen = (b.definition?.length || 0) + (b.definitionKo?.length || 0);
+            if (aDefLen !== bDefLen) return bDefLen - aDefLen;
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          });
+
+          const master = sorted[0];
+
+          // 모든 레코드에 대해 WordExamLevel 생성 (마스터 wordId로)
+          for (const record of records) {
+            await prisma.wordExamLevel.upsert({
+              where: {
+                wordId_examCategory: {
+                  wordId: master.id,
+                  examCategory: record.examCategory,
+                },
+              },
+              create: {
+                wordId: master.id,
+                examCategory: record.examCategory,
+                level: record.level || 'L1',
+                status: record.status,
+                frequency: record.frequency || 0,
+              },
+              update: {
+                level: record.level || 'L1',
+                status: record.status,
+                frequency: record.frequency || 0,
+              },
+            });
+            stats.examLevelsCreated++;
+          }
+
+          // 마스터가 아닌 레코드는 삭제 (관련 데이터는 CASCADE로 삭제됨)
+          // 주의: 이 부분은 주석 처리하고 나중에 별도로 실행
+          // for (const record of records) {
+          //   if (record.id !== master.id) {
+          //     await prisma.word.delete({ where: { id: record.id } });
+          //     stats.duplicatesMerged++;
+          //   }
+          // }
+        }
+      } catch (err: any) {
+        stats.errors.push(`${wordText}: ${err.message}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Migration completed (WordExamLevel created, duplicates NOT deleted yet)',
+      stats,
+      nextStep: 'Run /internal/merge-duplicates to actually merge duplicate words',
+    });
+  } catch (error) {
+    console.error('[Internal/MigrateWordPool] Error:', error);
+    res.status(500).json({ error: 'Migration failed' });
+  }
+});
+
+/**
+ * 중복 단어 병합 (실제 삭제)
+ * POST /internal/merge-duplicates?key=xxx&confirm=true
+ */
+router.post('/merge-duplicates', async (req, res) => {
+  const { key, confirm } = req.query;
+
+  if (key !== INTERNAL_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (confirm !== 'true') {
+    return res.status(400).json({
+      error: 'Add ?confirm=true to actually delete duplicate words',
+      warning: 'This will permanently delete duplicate Word records!',
+    });
+  }
+
+  try {
+    // Step 1: 모든 Word 레코드 조회
+    const allWords = await prisma.word.findMany({
+      select: {
+        id: true,
+        word: true,
+        examCategory: true,
+        aiGeneratedAt: true,
+        status: true,
+        definition: true,
+        definitionKo: true,
+        createdAt: true,
+      },
+      orderBy: { word: 'asc' },
+    });
+
+    // Step 2: 단어별로 그룹화
+    const wordGroups = new Map<string, typeof allWords>();
+    for (const w of allWords) {
+      const key = w.word.toLowerCase().trim();
+      if (!wordGroups.has(key)) {
+        wordGroups.set(key, []);
+      }
+      wordGroups.get(key)!.push(w);
+    }
+
+    const stats = {
+      duplicatesDeleted: 0,
+      errors: [] as string[],
+    };
+
+    // Step 3: 중복 삭제
+    for (const [wordText, records] of wordGroups) {
+      if (records.length > 1) {
+        try {
+          // 마스터 선정
+          const sorted = [...records].sort((a, b) => {
+            if (a.aiGeneratedAt && !b.aiGeneratedAt) return -1;
+            if (!a.aiGeneratedAt && b.aiGeneratedAt) return 1;
+            if (a.status === 'PUBLISHED' && b.status !== 'PUBLISHED') return -1;
+            if (a.status !== 'PUBLISHED' && b.status === 'PUBLISHED') return 1;
+            const aDefLen = (a.definition?.length || 0) + (a.definitionKo?.length || 0);
+            const bDefLen = (b.definition?.length || 0) + (b.definitionKo?.length || 0);
+            if (aDefLen !== bDefLen) return bDefLen - aDefLen;
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          });
+
+          const masterId = sorted[0].id;
+
+          // 마스터가 아닌 레코드 삭제
+          for (const record of records) {
+            if (record.id !== masterId) {
+              await prisma.word.delete({ where: { id: record.id } });
+              stats.duplicatesDeleted++;
+            }
+          }
+        } catch (err: any) {
+          stats.errors.push(`${wordText}: ${err.message}`);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Duplicate words merged successfully',
+      stats,
+    });
+  } catch (error) {
+    console.error('[Internal/MergeDuplicates] Error:', error);
+    res.status(500).json({ error: 'Merge failed' });
+  }
+});
+
+/**
+ * WordExamLevel 현황 조회
+ * GET /internal/word-exam-level-stats?key=xxx
+ */
+router.get('/word-exam-level-stats', async (req, res) => {
+  const { key } = req.query;
+
+  if (key !== INTERNAL_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // WordExamLevel 통계
+    const examLevelStats = await prisma.wordExamLevel.groupBy({
+      by: ['examCategory', 'level', 'status'],
+      _count: { id: true },
+      orderBy: [{ examCategory: 'asc' }, { level: 'asc' }, { status: 'asc' }],
+    });
+
+    // Word 통계
+    const wordStats = await prisma.word.groupBy({
+      by: ['examCategory', 'level', 'status'],
+      _count: { id: true },
+      orderBy: [{ examCategory: 'asc' }, { level: 'asc' }, { status: 'asc' }],
+    });
+
+    // 총 개수
+    const totalWords = await prisma.word.count();
+    const totalExamLevels = await prisma.wordExamLevel.count();
+    const uniqueWordsInExamLevel = await prisma.wordExamLevel.groupBy({
+      by: ['wordId'],
+    });
+
+    res.json({
+      summary: {
+        totalWords,
+        totalExamLevels,
+        uniqueWordsWithExamLevel: uniqueWordsInExamLevel.length,
+        wordsWithoutExamLevel: totalWords - uniqueWordsInExamLevel.length,
+      },
+      wordStats,
+      examLevelStats,
+    });
+  } catch (error) {
+    console.error('[Internal/WordExamLevelStats] Error:', error);
+    res.status(500).json({ error: 'Failed to get stats' });
+  }
+});
+
 export default router;
