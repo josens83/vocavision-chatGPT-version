@@ -3679,4 +3679,55 @@ router.get('/teps-seed-status', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /internal/update-package-duration?key=YOUR_SECRET&slug=teps-top-100&days=180
+ * 단품 패키지 이용 기간 수정
+ */
+router.get('/update-package-duration', async (req: Request, res: Response) => {
+  try {
+    const key = req.query.key as string;
+    if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
+      return res.status(403).json({ error: 'Forbidden: Invalid key' });
+    }
+
+    const slug = req.query.slug as string;
+    const days = parseInt(req.query.days as string, 10);
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Missing slug parameter' });
+    }
+
+    if (!days || days < 1) {
+      return res.status(400).json({ error: 'Invalid days parameter (must be >= 1)' });
+    }
+
+    const pkg = await prisma.productPackage.findUnique({
+      where: { slug },
+    });
+
+    if (!pkg) {
+      return res.status(404).json({ error: `Package not found: ${slug}` });
+    }
+
+    const updated = await prisma.productPackage.update({
+      where: { slug },
+      data: { durationDays: days },
+    });
+
+    res.json({
+      message: 'Package duration updated successfully',
+      package: {
+        id: updated.id,
+        name: updated.name,
+        slug: updated.slug,
+        durationDays: updated.durationDays,
+        previousDuration: pkg.durationDays,
+      },
+    });
+  } catch (error) {
+    console.error('[Internal/UpdatePackageDuration] Error:', error);
+    res.status(500).json({ error: 'Failed to update package duration' });
+  }
+});
+
 export default router;

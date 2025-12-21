@@ -89,7 +89,9 @@ function PackageCheckout({ packageSlug }: { packageSlug: string }) {
 
   useEffect(() => {
     if (_hasHydrated && !user) {
-      router.push(`/auth/login?redirect=/checkout?package=${packageSlug}`);
+      // redirect URL을 encodeURIComponent로 인코딩하여 쿼리 파라미터 충돌 방지
+      const redirectUrl = encodeURIComponent(`/checkout?package=${packageSlug}`);
+      router.push(`/auth/login?redirect=${redirectUrl}`);
     }
   }, [_hasHydrated, user, router, packageSlug]);
 
@@ -228,7 +230,7 @@ function PackageCheckout({ packageSlug }: { packageSlug: string }) {
                   포함된 단어 미리보기
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {packageInfo.previewWords.slice(0, 6).map((word, index) => (
+                  {packageInfo.previewWords.slice(0, 4).map((word, index) => (
                     <div
                       key={index}
                       className="p-3 bg-gray-50 rounded-lg text-sm"
@@ -245,7 +247,7 @@ function PackageCheckout({ packageSlug }: { packageSlug: string }) {
                   ))}
                 </div>
                 <p className="text-center text-sm text-gray-500 mt-4">
-                  외 {packageInfo.wordCount - 6}개 단어 더 포함
+                  외 {packageInfo.wordCount - 4}개 단어 더 포함
                 </p>
               </div>
             )}
