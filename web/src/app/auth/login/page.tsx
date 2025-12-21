@@ -16,9 +16,9 @@ function LoginContent() {
   const { user, _hasHydrated } = useAuthStore();
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  // next 또는 returnTo 파라미터 지원 (하위 호환성)
+  // next, returnTo, redirect 파라미터 모두 지원 (하위 호환성)
   // 기본값은 /my (마이페이지 = 로그인 후 첫 화면)
-  const nextParam = searchParams.get('next') || searchParams.get('returnTo');
+  const nextParam = searchParams.get('next') || searchParams.get('returnTo') || searchParams.get('redirect');
   const nextUrl = nextParam?.startsWith('/') ? nextParam : '/my';
 
   // 이미 로그인된 상태면 /my로 리다이렉트
