@@ -6,6 +6,7 @@ import Hero from "./Hero";
 import DDayBanner from "./DDayBanner";
 import ExamIconGrid from "./ExamIconGrid";
 import HeroCarousel from "./HeroCarousel";
+import ProductPackageSection from "./ProductPackageSection";
 import { CategoryGrid, StudyTypeCard, ExamCategoryCard, examCategories } from "./CategoryCard";
 import PopularWordsSection, { sampleBestWords, sampleNewWords } from "./PopularWordsSection";
 import { SectionHeader } from "@/components/ui";
@@ -125,6 +126,9 @@ export default function HomePage() {
 
       {/* D-Day 카운트다운 배너 */}
       <DDayBanner />
+
+      {/* 단품 패키지 섹션 - 나에게 딱 맞는 단어장 */}
+      <ProductPackageSection />
 
       {/* Hero Carousel - 프로모션/공지 슬라이드 */}
       <section className="py-8 px-6">

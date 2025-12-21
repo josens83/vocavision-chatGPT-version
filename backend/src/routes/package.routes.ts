@@ -1,0 +1,175 @@
+import { Router, Request, Response } from 'express';
+import prisma from '../lib/prisma';
+import logger from '../utils/logger';
+
+const router = Router();
+
+/**
+ * GET /api/packages
+ * 활성화된 단품 패키지 목록 조회
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const packages = await prisma.productPackage.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: {
+        displayOrder: 'asc',
+      },
+      include: {
+        _count: {
+          select: {
+            words: true,
+          },
+        },
+      },
+    });
+
+    const result = packages.map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      slug: pkg.slug,
+      description: pkg.description,
+      shortDesc: pkg.shortDesc,
+      price: pkg.price,
+      originalPrice: pkg.originalPrice,
+      durationDays: pkg.durationDays,
+      badge: pkg.badge,
+      badgeColor: pkg.badgeColor,
+      imageUrl: pkg.imageUrl,
+      isComingSoon: pkg.isComingSoon,
+      wordCount: pkg._count.words,
+    }));
+
+    res.json({ packages: result });
+  } catch (error) {
+    logger.error('[Packages] Error fetching packages:', error);
+    res.status(500).json({ error: 'Failed to fetch packages' });
+  }
+});
+
+/**
+ * GET /api/packages/:slug
+ * 특정 패키지 상세 정보 조회
+ */
+router.get('/:slug', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+
+    const pkg = await prisma.productPackage.findUnique({
+      where: { slug },
+      include: {
+        words: {
+          include: {
+            word: {
+              select: {
+                id: true,
+                word: true,
+                definition: true,
+                definitionKo: true,
+                pronunciation: true,
+                partOfSpeech: true,
+              },
+            },
+          },
+          orderBy: {
+            displayOrder: 'asc',
+          },
+          take: 10, // 미리보기용 10개만
+        },
+        _count: {
+          select: {
+            words: true,
+          },
+        },
+      },
+    });
+
+    if (!pkg) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    res.json({
+      package: {
+        id: pkg.id,
+        name: pkg.name,
+        slug: pkg.slug,
+        description: pkg.description,
+        shortDesc: pkg.shortDesc,
+        price: pkg.price,
+        originalPrice: pkg.originalPrice,
+        durationDays: pkg.durationDays,
+        badge: pkg.badge,
+        badgeColor: pkg.badgeColor,
+        imageUrl: pkg.imageUrl,
+        isComingSoon: pkg.isComingSoon,
+        wordCount: pkg._count.words,
+        previewWords: pkg.words.map((w) => w.word),
+      },
+    });
+  } catch (error) {
+    logger.error('[Packages] Error fetching package:', error);
+    res.status(500).json({ error: 'Failed to fetch package' });
+  }
+});
+
+/**
+ * GET /api/packages/:slug/words
+ * 패키지에 포함된 모든 단어 조회 (구매자만)
+ * TODO: 인증 및 구매 확인 로직 추가 필요
+ */
+router.get('/:slug/words', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    // TODO: req.user에서 userId 가져오기
+    // const userId = req.user?.id;
+
+    const pkg = await prisma.productPackage.findUnique({
+      where: { slug },
+      include: {
+        words: {
+          include: {
+            word: {
+              select: {
+                id: true,
+                word: true,
+                definition: true,
+                definitionKo: true,
+                pronunciation: true,
+                ipaUs: true,
+                ipaUk: true,
+                partOfSpeech: true,
+                tips: true,
+              },
+            },
+          },
+          orderBy: {
+            displayOrder: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!pkg) {
+      return res.status(404).json({ error: 'Package not found' });
+    }
+
+    // TODO: 구매 확인 로직
+    // const purchase = await prisma.userPurchase.findFirst({
+    //   where: { userId, packageId: pkg.id, status: 'ACTIVE' }
+    // });
+    // if (!purchase) return res.status(403).json({ error: 'Not purchased' });
+
+    res.json({
+      packageName: pkg.name,
+      wordCount: pkg.words.length,
+      words: pkg.words.map((w) => w.word),
+    });
+  } catch (error) {
+    logger.error('[Packages] Error fetching package words:', error);
+    res.status(500).json({ error: 'Failed to fetch package words' });
+  }
+});
+
+export default router;

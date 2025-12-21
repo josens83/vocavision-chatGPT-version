@@ -32,6 +32,7 @@ import internalRoutes from './routes/internal.routes';
 import contentGenerationRoutes from './routes/contentGeneration.routes';
 import adminRoutes from './routes/admin.routes';
 import paymentsRoutes from './routes/payments.routes';
+import packageRoutes from './routes/package.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -157,6 +158,7 @@ app.use('/api/leagues', leagueRoutes);
 app.use('/api/content', contentGenerationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/packages', packageRoutes);
 
 // Internal routes (for admin operations via browser URL)
 app.use('/internal', internalRoutes);
