@@ -3741,7 +3741,7 @@ router.get('/update-package-duration', async (req: Request, res: Response) => {
 router.get('/migrate-word-pool', async (req, res) => {
   const { key, dryRun } = req.query;
 
-  if (key !== INTERNAL_KEY) {
+  if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -3856,7 +3856,7 @@ router.get('/migrate-word-pool', async (req, res) => {
 router.post('/migrate-word-pool', async (req, res) => {
   const { key } = req.query;
 
-  if (key !== INTERNAL_KEY) {
+  if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -3984,7 +3984,7 @@ router.post('/migrate-word-pool', async (req, res) => {
 router.post('/merge-duplicates', async (req, res) => {
   const { key, confirm } = req.query;
 
-  if (key !== INTERNAL_KEY) {
+  if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -4075,7 +4075,7 @@ router.post('/merge-duplicates', async (req, res) => {
 router.get('/word-exam-level-stats', async (req, res) => {
   const { key } = req.query;
 
-  if (key !== INTERNAL_KEY) {
+  if (!key || key !== process.env.INTERNAL_SECRET_KEY) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
