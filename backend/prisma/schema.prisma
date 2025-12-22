@@ -179,7 +179,7 @@ model WordExamLevel {
   id           String        @id @default(uuid())
   wordId       String
   examCategory ExamCategory
-  level        String        // L1, L2, L3
+  level        String?       // L1, L2, L3 (nullable for CSAT_BASIC, EBS)
   frequency    Int           @default(0)  // 시험별 빈도
   status       ContentStatus @default(DRAFT)  // 시험별 발행 상태
 
