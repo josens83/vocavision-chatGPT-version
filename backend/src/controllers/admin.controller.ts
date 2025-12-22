@@ -1715,6 +1715,10 @@ export const getWordVisuals = async (
 /**
  * Update word visuals (CONCEPT, MNEMONIC, RHYME)
  * PUT /admin/words/:wordId/visuals
+ *
+ * Accepts either:
+ * 1. Array format: { visuals: [{ type: "CONCEPT", imageUrl: "...", ... }] }
+ * 2. Object format: { concept: { imageUrl: "...", ... }, mnemonic: { ... } }
  */
 export const updateWordVisuals = async (
   req: AuthRequest,
@@ -1723,7 +1727,7 @@ export const updateWordVisuals = async (
 ) => {
   try {
     const { wordId } = req.params;
-    const visualsData = req.body;
+    const requestData = req.body;
 
     // Verify word exists
     const word = await prisma.word.findUnique({
@@ -1736,38 +1740,70 @@ export const updateWordVisuals = async (
 
     const updatedVisuals: any[] = [];
 
-    // Process each visual type
-    for (const type of ['CONCEPT', 'MNEMONIC', 'RHYME'] as const) {
-      const typeData = visualsData[type.toLowerCase()];
-      if (!typeData) continue;
+    // Handle array format: { visuals: [{ type: "CONCEPT", ... }] }
+    if (requestData.visuals && Array.isArray(requestData.visuals)) {
+      for (const visualData of requestData.visuals) {
+        if (!visualData.type) continue;
 
-      // Upsert visual for this type
-      const visual = await prisma.wordVisual.upsert({
-        where: {
-          wordId_type: {
+        const type = visualData.type.toUpperCase() as 'CONCEPT' | 'MNEMONIC' | 'RHYME';
+        if (!['CONCEPT', 'MNEMONIC', 'RHYME'].includes(type)) continue;
+
+        const visual = await prisma.wordVisual.upsert({
+          where: {
+            wordId_type: { wordId, type },
+          },
+          update: {
+            imageUrl: visualData.imageUrl,
+            captionKo: visualData.captionKo,
+            captionEn: visualData.captionEn,
+            promptEn: visualData.promptEn,
+            labelKo: visualData.labelKo,
+            labelEn: visualData.labelEn,
+          },
+          create: {
             wordId,
             type,
+            imageUrl: visualData.imageUrl,
+            captionKo: visualData.captionKo,
+            captionEn: visualData.captionEn,
+            promptEn: visualData.promptEn,
+            labelEn: visualData.labelEn || (type === 'CONCEPT' ? 'Concept' : type === 'MNEMONIC' ? 'Mnemonic' : 'Rhyme'),
+            labelKo: visualData.labelKo || (type === 'CONCEPT' ? '의미' : type === 'MNEMONIC' ? '연상' : '라이밍'),
+            order: type === 'CONCEPT' ? 0 : type === 'MNEMONIC' ? 1 : 2,
           },
-        },
-        update: {
-          imageUrl: typeData.imageUrl,
-          captionKo: typeData.captionKo,
-          captionEn: typeData.captionEn,
-          promptEn: typeData.promptEn,
-        },
-        create: {
-          wordId,
-          type,
-          imageUrl: typeData.imageUrl,
-          captionKo: typeData.captionKo,
-          captionEn: typeData.captionEn,
-          promptEn: typeData.promptEn,
-          labelEn: type === 'CONCEPT' ? 'Concept' : type === 'MNEMONIC' ? 'Mnemonic' : 'Rhyme',
-          labelKo: type === 'CONCEPT' ? '의미' : type === 'MNEMONIC' ? '연상' : '라이밍',
-          order: type === 'CONCEPT' ? 0 : type === 'MNEMONIC' ? 1 : 2,
-        },
-      });
-      updatedVisuals.push(visual);
+        });
+        updatedVisuals.push(visual);
+      }
+    } else {
+      // Handle object format: { concept: { ... }, mnemonic: { ... } }
+      for (const type of ['CONCEPT', 'MNEMONIC', 'RHYME'] as const) {
+        const typeData = requestData[type.toLowerCase()];
+        if (!typeData) continue;
+
+        const visual = await prisma.wordVisual.upsert({
+          where: {
+            wordId_type: { wordId, type },
+          },
+          update: {
+            imageUrl: typeData.imageUrl,
+            captionKo: typeData.captionKo,
+            captionEn: typeData.captionEn,
+            promptEn: typeData.promptEn,
+          },
+          create: {
+            wordId,
+            type,
+            imageUrl: typeData.imageUrl,
+            captionKo: typeData.captionKo,
+            captionEn: typeData.captionEn,
+            promptEn: typeData.promptEn,
+            labelEn: type === 'CONCEPT' ? 'Concept' : type === 'MNEMONIC' ? 'Mnemonic' : 'Rhyme',
+            labelKo: type === 'CONCEPT' ? '의미' : type === 'MNEMONIC' ? '연상' : '라이밍',
+            order: type === 'CONCEPT' ? 0 : type === 'MNEMONIC' ? 1 : 2,
+          },
+        });
+        updatedVisuals.push(visual);
+      }
     }
 
     // Create audit log
@@ -1776,8 +1812,8 @@ export const updateWordVisuals = async (
       wordId,
       'UPDATE',
       null,
-      visualsData,
-      Object.keys(visualsData)
+      requestData,
+      Object.keys(requestData)
     );
 
     res.json({
