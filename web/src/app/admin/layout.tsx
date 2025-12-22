@@ -5,32 +5,19 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // useAuth 훅 사용 - Zustand hydration 대기 후 인증 체크
+  const { isLoading, isAuthenticated } = useAuth({
+    redirectTo: '/auth/login?redirect=/admin',
+  });
 
-  useEffect(() => {
-    // Check for token in localStorage
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-
-    if (!token) {
-      // Redirect to login with return URL
-      router.push('/auth/login?redirect=/admin');
-    } else {
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
-  }, [router]);
-
-  // Show loading spinner while checking auth
+  // Zustand 스토어 hydration 대기 중
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -42,7 +29,7 @@ export default function AdminLayout({
     );
   }
 
-  // Show nothing while redirecting
+  // 미인증 시 리다이렉트 중
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
