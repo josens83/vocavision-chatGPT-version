@@ -471,7 +471,9 @@ router.get('/status', async (req: Request, res: Response) => {
         totalWords: wordCount,
         users: userCount,
         csat: csatCounts.reduce((acc, c) => {
-          acc[c.level] = c._count.level;
+          if (c.level) {
+            acc[c.level] = c._count.level;
+          }
           return acc;
         }, {} as Record<string, number>),
       },

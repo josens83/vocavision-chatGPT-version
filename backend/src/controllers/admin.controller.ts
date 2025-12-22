@@ -257,7 +257,7 @@ export const getAdminWords = async (
         examLevels: w.examLevels?.map((el) => ({
           examCategory: el.examCategory,
           level: el.level,
-          displayLevel: dbLevelToFrontend[el.level] || 'BEGINNER',
+          displayLevel: el.level ? (dbLevelToFrontend[el.level] || 'BEGINNER') : null,
         })) || [],
       };
     });
