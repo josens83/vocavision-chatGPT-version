@@ -5,7 +5,7 @@
 // ---------------------------------------------
 // Enums
 // ---------------------------------------------
-export type ExamCategory = 'CSAT' | 'TEPS' | 'TOEIC' | 'TOEFL' | 'SAT';
+export type ExamCategory = 'CSAT' | 'CSAT_BASIC' | 'EBS' | 'TEPS' | 'TOEIC' | 'TOEFL' | 'SAT';
 
 export type ContentStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'PUBLISHED' | 'ARCHIVED';
 
@@ -227,10 +227,45 @@ export interface WordFilters {
 // ---------------------------------------------
 export const EXAM_CATEGORY_LABELS: Record<ExamCategory, string> = {
   CSAT: '수능',
+  CSAT_BASIC: '기초수능',
+  EBS: 'EBS',
   TEPS: 'TEPS',
   TOEIC: 'TOEIC',
   TOEFL: 'TOEFL',
   SAT: 'SAT',
+};
+
+// Exam category badge colors
+export const EXAM_CATEGORY_COLORS: Record<ExamCategory, string> = {
+  CSAT: 'bg-pink-500',
+  CSAT_BASIC: 'bg-rose-400',
+  EBS: 'bg-emerald-500',
+  TEPS: 'bg-purple-500',
+  TOEIC: 'bg-blue-500',
+  TOEFL: 'bg-sky-500',
+  SAT: 'bg-slate-500',
+};
+
+// Helper function to get exam/level display label
+export const getExamLevelLabel = (examCategory: string, level: string | null): string => {
+  const labels: Record<string, string> = {
+    'CSAT': '수능',
+    'CSAT_BASIC': '기초수능',
+    'EBS': 'EBS',
+    'TEPS': 'TEPS',
+    'TOEFL': 'TOEFL',
+    'TOEIC': 'TOEIC',
+    'SAT': 'SAT',
+  };
+
+  const base = labels[examCategory] || examCategory;
+
+  // level이 null이면 레벨 표시 안함
+  if (!level) {
+    return base;
+  }
+
+  return `${base} ${level}`;
 };
 
 export const LEVEL_LABELS: Record<DifficultyLevel, string> = {
