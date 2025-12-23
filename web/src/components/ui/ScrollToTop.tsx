@@ -1,64 +1,39 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from 'react';
 
-interface ScrollToTopProps {
-  showAfter?: number; // 스크롤 얼마나 내려야 표시될지 (기본: 300px)
-}
-
-export default function ScrollToTop({ showAfter = 300 }: ScrollToTopProps) {
+export default function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsVisible(window.scrollY > showAfter);
+    const toggleVisibility = () => {
+      setIsVisible(window.scrollY > 300);
     };
 
     // 초기 상태 확인
-    handleScroll();
+    toggleVisibility();
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [showAfter]);
+    window.addEventListener('scroll', toggleVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', toggleVisibility);
+  }, []);
 
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth",
+      behavior: 'smooth'
     });
   };
+
+  if (!isVisible) return null;
 
   return (
     <button
       onClick={scrollToTop}
-      className={`
-        fixed bottom-6 right-6 z-50
-        w-12 h-12 rounded-full
-        bg-brand-primary text-white
-        shadow-lg shadow-brand-primary/30
-        flex items-center justify-center
-        transition-all duration-300
-        hover:bg-brand-primary/90 hover:scale-110
-        active:scale-95
-        ${isVisible
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 translate-y-4 pointer-events-none"
-        }
-      `}
+      className="fixed right-4 bottom-24 md:bottom-8 z-40 w-12 h-12 bg-white border border-gray-200 rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300"
       aria-label="맨 위로 스크롤"
     >
-      <svg
-        className="w-5 h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2.5}
-          d="M5 15l7-7 7 7"
-        />
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
       </svg>
     </button>
   );
