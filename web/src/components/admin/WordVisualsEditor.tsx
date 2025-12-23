@@ -111,20 +111,16 @@ export default function WordVisualsEditor({
     onChange(updatedVisuals);
   };
 
-  // Handle image deletion with API call
+  // Handle image deletion (local state only - saved when user clicks Save button)
   const handleDeleteImage = (type: VisualType) => {
     const currentVisuals = VISUAL_TYPES.map(getVisual);
     const updatedVisuals = currentVisuals.map((v) =>
       v.type === type ? { ...v, imageUrl: undefined } : v
     );
 
-    // Update local state
+    // Update local state only - will be persisted when user clicks Save
+    // Same behavior as caption editing
     onChange(updatedVisuals);
-
-    // Call API to persist deletion
-    if (onImageDelete) {
-      onImageDelete(type, updatedVisuals);
-    }
   };
 
   // Handle image upload
