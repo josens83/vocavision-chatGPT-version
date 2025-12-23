@@ -1886,7 +1886,8 @@ const imageGenJobs: Map<string, {
 
 /**
  * Get image generation status by level
- * GET /admin/image-generation/status
+ * GET /admin/image-generation/status?examCategory=TEPS
+ * Supports both examCategory and examType query params for backwards compatibility
  */
 export const getImageGenerationStatus = async (
   req: AuthRequest,
@@ -1894,27 +1895,36 @@ export const getImageGenerationStatus = async (
   next: NextFunction
 ) => {
   try {
-    const examType = (req.query.examType as string) || 'CSAT';
+    // Support both examCategory and examType for backwards compatibility
+    const examCategory = (req.query.examCategory as string) || (req.query.examType as string) || 'CSAT';
 
-    // Get words by level with image counts
+    // Get words by level with image counts using WordExamLevel mapping
     const levels = ['L1', 'L2', 'L3'];
     const levelStats = await Promise.all(
       levels.map(async (level) => {
-        // Count total words for this level
+        // Count total words for this exam category and level using WordExamLevel
         const totalWords = await prisma.word.count({
           where: {
-            examCategory: examType as any,
-            level,
             status: { in: ['PUBLISHED', 'PENDING_REVIEW'] },
+            examLevels: {
+              some: {
+                examCategory: examCategory as any,
+                level: level,
+              },
+            },
           },
         });
 
         // Count words with at least one image
         const withImages = await prisma.word.count({
           where: {
-            examCategory: examType as any,
-            level,
             status: { in: ['PUBLISHED', 'PENDING_REVIEW'] },
+            examLevels: {
+              some: {
+                examCategory: examCategory as any,
+                level: level,
+              },
+            },
             visuals: { some: { imageUrl: { not: null } } },
           },
         });
@@ -1941,7 +1951,8 @@ export const getImageGenerationStatus = async (
     res.json({
       success: true,
       data: {
-        examType,
+        examType: examCategory,
+        examCategory,
         levels: levelStats,
         totalWords,
         totalWithImages,
@@ -1958,6 +1969,7 @@ export const getImageGenerationStatus = async (
 /**
  * Start batch image generation
  * POST /admin/image-generation/batch
+ * Supports both examCategory and examType body params for backwards compatibility
  */
 export const startImageBatchGeneration = async (
   req: AuthRequest,
@@ -1965,7 +1977,9 @@ export const startImageBatchGeneration = async (
   next: NextFunction
 ) => {
   try {
-    const { examType = 'CSAT', level, limit = 100 } = req.body;
+    // Support both examCategory and examType for backwards compatibility
+    const examCategory = req.body.examCategory || req.body.examType || 'CSAT';
+    const { level, limit = 100 } = req.body;
 
     if (!level || !['L1', 'L2', 'L3'].includes(level)) {
       return res.status(400).json({
@@ -1976,13 +1990,17 @@ export const startImageBatchGeneration = async (
 
     const batchLimit = Math.min(Math.max(1, limit), 1100);
 
-    // Find words that need images
+    // Find words that need images using WordExamLevel mapping
     const wordsToProcess = await prisma.word.findMany({
       where: {
-        examCategory: examType as any,
-        level,
         status: { in: ['PUBLISHED', 'PENDING_REVIEW'] },
         aiGeneratedAt: { not: null },
+        examLevels: {
+          some: {
+            examCategory: examCategory as any,
+            level: level,
+          },
+        },
         // Exclude words that already have all 3 image types
         NOT: {
           AND: [
