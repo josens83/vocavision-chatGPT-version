@@ -726,6 +726,11 @@ export default function AdminImagesPage() {
                           {visual.captionKo}
                         </p>
                       )}
+                      {visual?.captionEn && (
+                        <p className="text-xs text-slate-400 text-center mt-1 italic">
+                          {visual.captionEn}
+                        </p>
+                      )}
 
                       {/* Actions */}
                       <div className="flex gap-2">
