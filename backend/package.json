@@ -6,13 +6,15 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "npx prisma migrate deploy && node dist/index.js",
-    "start:prod": "node dist/index.js",
+
+    "start": "node dist/index.js",
+
+    "migrate:deploy": "prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
+
     "prisma:seed": "tsx prisma/seed.ts",
     "seed:csat-l1": "tsx prisma/seed-csat-l1.ts",
     "seed:csat-l2": "tsx prisma/seed-csat-l2.ts",
@@ -20,6 +22,7 @@
     "seed:teps-l1": "tsx prisma/seed-teps-l1.ts",
     "seed:teps-l2": "tsx prisma/seed-teps-l2.ts",
     "seed:teps-l3": "tsx prisma/seed-teps-l3.ts",
+
     "generate-images": "tsx src/scripts/generateImages.ts",
     "test": "jest",
     "lint": "eslint src --ext .ts",
