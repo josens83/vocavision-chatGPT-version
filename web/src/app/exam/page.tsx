@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 
 const examCategories = [
   {
@@ -159,8 +160,8 @@ export default function ExamListPage() {
                         </span>
                       ))}
                     </div>
-                    <div className={`text-sm font-medium ${category.textColor} group-hover:underline`}>
-                      학습 시작하기 →
+                    <div className={`text-sm font-medium ${category.textColor} group-hover:underline inline-flex items-center gap-1`}>
+                      학습 시작하기 <ArrowRight className="w-3.5 h-3.5" />
                     </div>
                   </div>
                 </Link>

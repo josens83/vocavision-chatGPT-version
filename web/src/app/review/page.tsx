@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { progressAPI } from '@/lib/api';
 import TabLayout from '@/components/layout/TabLayout';
@@ -192,8 +193,8 @@ export default function ReviewPage() {
             </div>
             {stats.dueToday > 5 && (
               <div className="p-4 text-center border-t border-gray-100">
-                <Link href="/learn?mode=review" className="text-pink-600 text-sm font-bold">
-                  전체 {stats.dueToday}개 보기 →
+                <Link href="/learn?mode=review" className="text-pink-600 text-sm font-bold inline-flex items-center gap-1">
+                  전체 {stats.dueToday}개 보기 <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
             )}
