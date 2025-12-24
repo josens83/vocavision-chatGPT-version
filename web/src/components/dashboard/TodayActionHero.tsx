@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 interface TodayActionHeroProps {
   dueCount: number;
@@ -42,11 +43,11 @@ export default function TodayActionHero({
 
           {/* Secondary Links */}
           <div className="flex gap-4 mt-3">
-            <Link href="/learn" className="text-pink-200 hover:text-white text-sm transition-colors">
-              새 단어 학습 →
+            <Link href="/learn" className="text-pink-200 hover:text-white text-sm transition-colors inline-flex items-center gap-1">
+              새 단어 학습 <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-            <Link href="/words?filter=weak" className="text-pink-200 hover:text-white text-sm transition-colors">
-              약한 단어 복습 →
+            <Link href="/words?filter=weak" className="text-pink-200 hover:text-white text-sm transition-colors inline-flex items-center gap-1">
+              약한 단어 복습 <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>

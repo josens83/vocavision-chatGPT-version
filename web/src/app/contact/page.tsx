@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: '문의하기',
@@ -120,7 +121,7 @@ export default function ContactPage() {
               className="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-colors whitespace-nowrap"
             >
               FAQ 보기
-              <span>&rarr;</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>

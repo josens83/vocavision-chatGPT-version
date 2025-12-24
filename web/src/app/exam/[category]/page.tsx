@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 
 // 시험 카테고리 정보
@@ -240,7 +241,7 @@ export default function ExamCategoryPage() {
               href={user ? `/learn?exam=${category}` : '/auth/register'}
               className={`inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r ${exam.color} text-white rounded-lg font-semibold hover:opacity-90 transition`}
             >
-              {user ? '학습 시작하기' : '무료로 시작하기'} →
+              {user ? '학습 시작하기' : '무료로 시작하기'} <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         </div>
@@ -268,8 +269,8 @@ export default function ExamCategoryPage() {
                     </div>
                     <p className="text-gray-500 text-sm mb-2">{level.target}</p>
                     <p className="text-gray-600 mb-4">{level.description}</p>
-                    <span className={`text-sm font-medium ${exam.textColor} group-hover:underline`}>
-                      학습하기 →
+                    <span className={`text-sm font-medium ${exam.textColor} group-hover:underline inline-flex items-center gap-1`}>
+                      학습하기 <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </Link>
@@ -286,9 +287,9 @@ export default function ExamCategoryPage() {
             <h2 className="text-2xl font-bold text-gray-900">샘플 단어</h2>
             <Link
               href={user ? `/learn?exam=${category}` : '/auth/register'}
-              className={`text-sm font-medium ${exam.textColor} hover:underline`}
+              className={`text-sm font-medium ${exam.textColor} hover:underline inline-flex items-center gap-1`}
             >
-              전체 보기 →
+              전체 보기 <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 

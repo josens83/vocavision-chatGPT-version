@@ -289,6 +289,110 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {/* 단품 상품 */}
+        <div className="mt-20">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">
+            단품 상품
+          </h2>
+          <p className="text-gray-600 text-center mb-8">
+            필요한 콘텐츠만 골라서 구매하세요. 구독 없이 영구 이용 가능!
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* 수능 핵심 200 */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 relative hover:shadow-xl transition-shadow">
+              <div className="absolute -top-3 right-4">
+                <span className="bg-orange-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  베스트
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">🎯</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">수능 핵심 200</h3>
+                  <p className="text-sm text-gray-500">200개 단어</p>
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                수능 영어에서 가장 자주 출제되는 핵심 200단어를 집중 학습하세요.
+              </p>
+              <div className="flex items-end gap-1 mb-4">
+                <span className="text-3xl font-bold text-gray-900">₩3,900</span>
+                <span className="text-gray-500 text-sm mb-1">일회성</span>
+              </div>
+              <button
+                onClick={() => router.push("/checkout?product=csat-core-200")}
+                className="w-full py-3 px-4 text-center rounded-xl font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+              >
+                구매하기
+              </button>
+            </div>
+
+            {/* EBS 연계어휘 */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 relative hover:shadow-xl transition-shadow">
+              <div className="absolute -top-3 right-4">
+                <span className="bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  대용량
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">📚</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">EBS 연계어휘</h3>
+                  <p className="text-sm text-gray-500">3,837개 단어</p>
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                EBS 수능특강, 수능완성에서 나오는 연계 어휘를 완벽하게 마스터하세요.
+              </p>
+              <div className="flex items-end gap-1 mb-4">
+                <span className="text-3xl font-bold text-gray-900">₩4,900</span>
+                <span className="text-gray-500 text-sm mb-1">일회성</span>
+              </div>
+              <button
+                onClick={() => router.push("/checkout?product=ebs-vocab")}
+                className="w-full py-3 px-4 text-center rounded-xl font-medium bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              >
+                구매하기
+              </button>
+            </div>
+
+            {/* 2026년 수능기출완전분석 */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 relative hover:shadow-xl transition-shadow opacity-75">
+              <div className="absolute -top-3 right-4">
+                <span className="bg-gray-400 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  출시예정
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">📝</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">2026 수능기출완전분석</h3>
+                  <p className="text-sm text-gray-500">출시 준비중</p>
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm mb-4">
+                2026년 수능 기출문제 완전 분석. 출제 경향과 핵심 어휘를 한 번에!
+              </p>
+              <div className="flex items-end gap-1 mb-4">
+                <span className="text-3xl font-bold text-gray-400">가격 미정</span>
+              </div>
+              <button
+                disabled
+                className="w-full py-3 px-4 text-center rounded-xl font-medium bg-gray-200 text-gray-500 cursor-not-allowed"
+              >
+                출시 알림 받기
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* 기능 비교 테이블 */}
         <div className="mt-20">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">

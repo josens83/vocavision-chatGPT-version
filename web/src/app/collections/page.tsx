@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import axios from 'axios';
 
@@ -188,15 +189,15 @@ export default function CollectionsPage() {
                       href="/auth/login"
                       className="text-blue-600 font-semibold hover:text-blue-700"
                     >
-                      로그인 →
+                      <span className="inline-flex items-center gap-1">로그인 <ArrowRight className="w-3.5 h-3.5" /></span>
                     </Link>
                   </div>
                 )}
 
                 {/* CTA Button */}
                 <div className="mt-4">
-                  <div className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-center font-semibold group-hover:bg-blue-600 group-hover:text-white transition">
-                    컬렉션 보기 →
+                  <div className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-center font-semibold group-hover:bg-blue-600 group-hover:text-white transition inline-flex items-center justify-center gap-1">
+                    컬렉션 보기 <ArrowRight className="w-3.5 h-3.5" />
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmModal';
@@ -196,9 +197,9 @@ export default function BookmarksPage() {
                 <div className="flex gap-2">
                   <Link
                     href={`/words/${bookmark.wordId}`}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
                   >
-                    자세히 보기 →
+                    자세히 보기 <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </div>

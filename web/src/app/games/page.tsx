@@ -12,6 +12,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import Link from 'next/link';
 
@@ -143,7 +144,7 @@ export default function GamesPage() {
                       <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-1 text-white text-sm font-semibold">
                         {mode.difficulty}
                       </div>
-                      <div className="text-white text-2xl">→</div>
+                      <ArrowRight className="text-white w-6 h-6" />
                     </div>
 
                     {/* Decorative Elements */}

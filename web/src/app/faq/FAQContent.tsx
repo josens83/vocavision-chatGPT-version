@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 
 interface FAQItem {
   question: string;
@@ -188,7 +189,7 @@ export default function FAQContent() {
               className="inline-flex items-center gap-2 bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-colors whitespace-nowrap"
             >
               문의하기
-              <span>&rarr;</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore, useExamCourseStore } from '@/lib/store';
 import { progressAPI } from '@/lib/api';
 import TabLayout from '@/components/layout/TabLayout';
@@ -272,7 +273,7 @@ export default function MyPage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-gray-900">최근 학습 단어</h3>
             {recentWords.length > 0 && (
-              <Link href="/history" className="text-sm text-pink-600 font-medium">전체 보기 →</Link>
+              <Link href="/history" className="text-sm text-pink-600 font-medium inline-flex items-center gap-1">전체 보기 <ArrowRight className="w-3.5 h-3.5" /></Link>
             )}
           </div>
 
@@ -363,7 +364,7 @@ export default function MyPage() {
         <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold text-gray-900">학습 통계</h3>
-            <Link href="/statistics" className="text-sm text-pink-600 font-medium">상세 보기 →</Link>
+            <Link href="/statistics" className="text-sm text-pink-600 font-medium inline-flex items-center gap-1">상세 보기 <ArrowRight className="w-3.5 h-3.5" /></Link>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-blue-50 rounded-xl p-4 text-center">

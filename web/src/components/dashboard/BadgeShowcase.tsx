@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 interface Badge {
   id: string;
@@ -44,8 +45,8 @@ export default function BadgeShowcase({ badges = defaultBadges }: BadgeShowcaseP
     <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-gray-900">내 배지</h2>
-        <Link href="/achievements" className="text-sm text-pink-600 font-medium hover:underline">
-          전체 보기 →
+        <Link href="/achievements" className="text-sm text-pink-600 font-medium hover:underline inline-flex items-center gap-1">
+          전체 보기 <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
       <div className="grid grid-cols-3 gap-3">

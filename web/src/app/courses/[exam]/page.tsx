@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore, useExamCourseStore, ExamType } from '@/lib/store';
 import { wordsAPI } from '@/lib/api';
 
@@ -277,8 +278,8 @@ export default function ExamCoursePage() {
                   <span className="text-sm text-gray-500">{level.wordCount}단어</span>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">{level.target}</p>
-                <span className="text-sm font-medium text-blue-600 group-hover:underline">
-                  학습하기 →
+                <span className="text-sm font-medium text-blue-600 group-hover:underline inline-flex items-center gap-1">
+                  학습하기 <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               </Link>
             ))}
@@ -291,9 +292,9 @@ export default function ExamCoursePage() {
             <h2 className="text-xl font-bold">{exam.name} 필수 어휘</h2>
             <Link
               href={`/words?exam=${examKey}`}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center gap-1"
             >
-              전체 보기 →
+              전체 보기 <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           {loading ? (

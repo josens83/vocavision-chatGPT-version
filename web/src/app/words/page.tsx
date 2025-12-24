@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { wordsAPI } from '@/lib/api';
 import { EmptySearchResults } from '@/components/ui/EmptyState';
@@ -359,9 +360,9 @@ function WordCard({
         <span className="text-sm text-gray-500">{word.partOfSpeech}</span>
         <Link
           href={`/words/${word.id}`}
-          className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+          className="text-blue-600 hover:text-blue-700 font-medium text-sm inline-flex items-center gap-1"
         >
-          자세히 보기 →
+          자세히 보기 <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
     </div>
