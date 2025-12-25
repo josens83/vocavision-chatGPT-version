@@ -15,6 +15,7 @@
  * 9. Pronunciation (발음) - 발음 기호 및 음성
  */
 
+import Image from "next/image";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -449,10 +450,13 @@ function ImageMode({
       <div
         className={`relative ${compact ? "aspect-video" : "aspect-square"} rounded-xl overflow-hidden bg-slate-100`}
       >
-        <img
+        <Image
           src={visual.imageUrl}
           alt={`${word.word} - ${config.label}`}
-          className="w-full h-full object-cover"
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className="object-cover"
+          loading="lazy"
         />
       </div>
 

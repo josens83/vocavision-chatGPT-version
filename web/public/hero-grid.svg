@@ -1,0 +1,24 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F8FAFC" offset="0"/>
+      <stop stop-color="#E3F3FA" offset="0.5"/>
+      <stop stop-color="#E8F5E4" offset="1"/>
+    </linearGradient>
+    <linearGradient id="grid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A8EC1" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#A84D98" stop-opacity="0.05"/>
+    </linearGradient>
+    <radialGradient id="highlight" cx="50%" cy="50%" r="0.6">
+      <stop offset="0" stop-color="#50AF31" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#50AF31" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1440" height="900" fill="url(#bg)"/>
+  <g opacity="0.6">
+    <path d="M0 60H1440M0 180H1440M0 300H1440M0 420H1440M0 540H1440M0 660H1440M0 780H1440" stroke="url(#grid)" stroke-width="1.5"/>
+    <path d="M120 0V900M360 0V900M600 0V900M840 0V900M1080 0V900M1320 0V900" stroke="url(#grid)" stroke-width="1.5"/>
+  </g>
+  <circle cx="260" cy="220" r="240" fill="url(#highlight)"/>
+  <circle cx="1160" cy="660" r="260" fill="url(#highlight)"/>
+</svg>

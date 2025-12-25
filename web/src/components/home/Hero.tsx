@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PLATFORM_STATS } from "@/constants/stats";
@@ -68,6 +69,17 @@ export default function Hero() {
   return (
     <section className="relative min-h-[65vh] md:min-h-[75vh] flex items-center overflow-hidden">
       <div className="absolute inset-0 hero-gradient hero-pattern" />
+      <Image
+        src="/hero-grid.svg"
+        alt=""
+        fill
+        priority={false}
+        loading="lazy"
+        sizes="100vw"
+        className="object-cover opacity-70"
+        aria-hidden
+        role="presentation"
+      />
       <div className="absolute top-20 left-10 w-72 h-72 bg-level-beginner/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-level-intermediate/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-level-advanced/5 rounded-full blur-3xl" />

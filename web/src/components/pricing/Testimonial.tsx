@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ReactNode } from "react";
 
 // ============================================
@@ -80,10 +81,13 @@ export function TestimonialCard({
       {/* Author */}
       <div className="flex flex-col items-center gap-3">
         {avatarUrl ? (
-          <img
+          <Image
             src={avatarUrl}
             alt={authorName}
-            className="w-10 h-10 rounded-full object-cover border-2 border-green-400"
+            width={40}
+            height={40}
+            className="rounded-full object-cover border-2 border-green-500"
+            loading="lazy"
           />
         ) : (
           <AvatarInitials name={authorName} />

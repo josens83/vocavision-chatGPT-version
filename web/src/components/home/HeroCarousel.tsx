@@ -157,7 +157,9 @@ export function HeroCarousel({
                   bg-white text-slate-900 font-semibold rounded-xl
                   hover:bg-white/90 hover:shadow-lg transition-all
                   hover:-translate-y-0.5
+                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
                 "
+                aria-label={`${currentSlide.title} 자세히 보기`}
               >
                 {currentSlide.ctaText || "자세히 보기"}
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,7 +174,9 @@ export function HeroCarousel({
                   inline-flex items-center gap-2 px-6 py-3
                   bg-white/10 text-white font-medium rounded-xl border border-white/20
                   hover:bg-white/20 transition-colors
+                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
                 "
+                aria-label={`${currentSlide.title} 추가 정보`}
               >
                 {currentSlide.secondaryCtaText || "더 알아보기"}
               </Link>
@@ -191,6 +195,7 @@ export function HeroCarousel({
               w-10 h-10 rounded-full bg-white/20 backdrop-blur
               flex items-center justify-center text-white
               hover:bg-white/30 transition-colors
+              focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
               opacity-0 group-hover:opacity-100
             "
             aria-label="이전 슬라이드"
@@ -206,6 +211,7 @@ export function HeroCarousel({
               w-10 h-10 rounded-full bg-white/20 backdrop-blur
               flex items-center justify-center text-white
               hover:bg-white/30 transition-colors
+              focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
               opacity-0 group-hover:opacity-100
             "
             aria-label="다음 슬라이드"
@@ -230,6 +236,7 @@ export function HeroCarousel({
                   ? "bg-white w-8"
                   : "bg-white/40 hover:bg-white/60"
                 }
+                focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white
               `}
               aria-label={`슬라이드 ${index + 1}로 이동`}
             />
