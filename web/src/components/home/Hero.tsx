@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PLATFORM_STATS } from "@/constants/stats";
 import { useAuthStore } from "@/lib/store";
 
 const Icons = {
@@ -34,17 +33,16 @@ const Icons = {
   ),
 };
 
-// Hero 섹션 통계 (실제 데이터 기반)
-const stats = [
-  { label: "수능 필수", value: PLATFORM_STATS.totalWords.toLocaleString(), suffix: "개" },
-  { label: "TEPS 어휘", value: PLATFORM_STATS.exams.TEPS.words.toLocaleString(), suffix: "개" },
-  { label: "학습 모드", value: String(PLATFORM_STATS.learningModes), suffix: "가지" },
-];
-
 const features = [
   { icon: Icons.BookOpen, title: "스마트 플래시카드", description: "과학적 간격 반복으로 효율적 암기" },
   { icon: Icons.Brain, title: "적응형 퀴즈", description: "오답 기반 난이도 조절 시스템" },
   { icon: Icons.ChartBar, title: "학습 분석", description: "상세한 진도 추적과 통계 제공" },
+];
+
+const socialProof = [
+  { text: "매일 10분, 무료 체험으로 시작한 학습자들이 테스트까지 완주하고 있어요." },
+  { text: "수능·TEPS 단어를 한 번에 준비한 학습자들이 ‘다시 돌아오게 된다’고 말해요." },
+  { text: "오답 복습과 통계까지 이어지는 흐름 덕분에 학습 리듬이 쉽게 무너지지 않아요." },
 ];
 
 export default function Hero() {
@@ -57,15 +55,15 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative min-h-[70vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[65vh] md:min-h-[75vh] flex items-center overflow-hidden">
       <div className="absolute inset-0 hero-gradient hero-pattern" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-level-beginner/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-level-intermediate/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-level-advanced/5 rounded-full blur-3xl" />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div className={`space-y-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-12 pb-16 md:py-16">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className={`space-y-7 md:space-y-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-surface-border shadow-sm">
               <Icons.Sparkles />
               <span className="text-sm font-medium text-slate-600">스마트 영어 학습 플랫폼</span>
@@ -80,44 +78,36 @@ export default function Hero() {
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl text-slate-600 max-w-xl leading-relaxed">
+            <p className="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
               과학적으로 검증된 <strong className="text-slate-800">간격 반복 학습</strong>과{' '}
               <strong className="text-slate-800">적응형 퀴즈</strong>로 효율적인 어휘력 향상을 경험하세요.
             </p>
 
-            <div className="flex flex-wrap gap-4 pt-4">
-              {isLoggedIn ? (
-                <>
-                  <Link href="/study" className="btn btn-primary group">
-                    <Icons.Play />
-                    <span>학습 시작하기</span>
-                  </Link>
-                  <Link href="/review?exam=CSAT" className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5">
-                    <Icons.BookOpen />
-                    <span>복습하기</span>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/learn?exam=CSAT&demo=1" className="btn btn-primary group">
-                    <Icons.Play />
-                    <span>60초 맛보기</span>
-                  </Link>
-                  <Link href="/auth/login" className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5">
-                    <Icons.Sparkles />
-                    <span>무료 회원가입</span>
-                  </Link>
-                </>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 pt-2">
+              <Link href={isLoggedIn ? "/study" : "/auth/register"} className="btn btn-primary group">
+                <Icons.Play />
+                <span>{isLoggedIn ? "학습 이어하기" : "시작하기(무료)"}</span>
+              </Link>
+              {!isLoggedIn && (
+                <p className="text-sm text-slate-500 sm:ml-2">
+                  가입 전 60초 맛보기 후, 무료 회원가입으로 바로 이어집니다.
+                </p>
               )}
             </div>
 
-            <div className="flex gap-8 pt-8 border-t border-slate-200">
-              {stats.map((stat, index) => (
-                <div key={stat.label} className={`${isVisible ? "animate-fade-in-up" : "opacity-0"}`} style={{ animationDelay: `${0.3 + index * 0.1}s` }}>
-                  <div className="text-3xl font-display font-bold text-slate-900">
-                    {stat.value}<span className="text-lg text-slate-500">{stat.suffix}</span>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pt-8 border-t border-slate-200">
+              {socialProof.map((item, index) => (
+                <div
+                  key={item.text}
+                  className={`flex items-start gap-3 rounded-xl bg-white/70 p-3 md:p-4 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.4)] ${
+                    isVisible ? "animate-fade-in-up" : "opacity-0"
+                  }`}
+                  style={{ animationDelay: `${0.25 + index * 0.08}s` }}
+                >
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+                    <Icons.Sparkles />
                   </div>
-                  <div className="text-sm text-slate-500">{stat.label}</div>
+                  <p className="text-sm md:text-base text-slate-600 leading-relaxed">{item.text}</p>
                 </div>
               ))}
             </div>
