@@ -50,6 +50,12 @@ const features = hero.features.map((feature, index) => ({
   icon: featureIcons[index] ?? Icons.BookOpen,
 }));
 
+const socialProof = [
+  { text: "매일 10분, 무료 체험으로 시작한 학습자들이 테스트까지 완주하고 있어요." },
+  { text: "수능·TEPS 단어를 한 번에 준비한 학습자들이 ‘다시 돌아오게 된다’고 말해요." },
+  { text: "오답 복습과 통계까지 이어지는 흐름 덕분에 학습 리듬이 쉽게 무너지지 않아요." },
+];
+
 export default function Hero() {
   const [isVisible, setIsVisible] = useState(false);
   const { user, _hasHydrated } = useAuthStore();
@@ -60,15 +66,15 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative min-h-[70vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[65vh] md:min-h-[75vh] flex items-center overflow-hidden">
       <div className="absolute inset-0 hero-gradient hero-pattern" />
       <div className="absolute top-20 left-10 w-72 h-72 bg-level-beginner/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-level-intermediate/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-level-advanced/5 rounded-full blur-3xl" />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div className={`space-y-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-12 pb-16 md:py-16">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className={`space-y-7 md:space-y-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-surface-border shadow-sm">
               <Icons.Sparkles />
               <span className="text-sm font-medium text-slate-600">{hero.badge}</span>
@@ -119,13 +125,19 @@ export default function Hero() {
               )}
             </div>
 
-            <div className="flex gap-8 pt-8 border-t border-slate-200">
-              {stats.map((stat, index) => (
-                <div key={stat.label} className={`${isVisible ? "animate-fade-in-up" : "opacity-0"}`} style={{ animationDelay: `${0.3 + index * 0.1}s` }}>
-                  <div className="text-3xl font-display font-bold text-slate-900">
-                    {stat.value}<span className="text-lg text-slate-500">{stat.suffix}</span>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pt-8 border-t border-slate-200">
+              {socialProof.map((item, index) => (
+                <div
+                  key={item.text}
+                  className={`flex items-start gap-3 rounded-xl bg-white/70 p-3 md:p-4 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.4)] ${
+                    isVisible ? "animate-fade-in-up" : "opacity-0"
+                  }`}
+                  style={{ animationDelay: `${0.25 + index * 0.08}s` }}
+                >
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+                    <Icons.Sparkles />
                   </div>
-                  <div className="text-sm text-slate-500">{stat.label}</div>
+                  <p className="text-sm md:text-base text-slate-600 leading-relaxed">{item.text}</p>
                 </div>
               ))}
             </div>
