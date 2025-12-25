@@ -13,7 +13,7 @@ import { SupportFloatingButton } from "@/components/ui/SupportFloatingButton";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-slate-950">
       <Hero />
 
       {/* 학습 → 테스트 → 복습 → 성과 확인 흐름 */}
@@ -36,7 +36,7 @@ export default function HomePage() {
       </section>
 
       {/* 시험별 빠른 선택 (Fast Campus 스타일 아이콘 그리드) */}
-      <section className="py-12 px-6 bg-slate-50">
+      <section className="py-12 px-6 bg-slate-50 dark:bg-slate-900">
         <div className="max-w-7xl mx-auto">
           <ExamIconGrid />
         </div>
@@ -90,7 +90,7 @@ function PopularWordsSkeleton() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {[...Array(10)].map((_, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 overflow-hidden animate-pulse">
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-pulse">
               <div className="aspect-square bg-slate-100" />
               <div className="p-3">
                 <div className="h-5 w-3/4 bg-slate-100 rounded mb-1" />

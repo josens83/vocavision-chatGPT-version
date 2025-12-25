@@ -11,20 +11,24 @@ import { ConfirmProvider } from '@/components/ui/ConfirmModal';
 import { AuthRequiredProvider } from '@/components/ui/AuthRequiredModal';
 import { ComingSoonProvider } from '@/components/ui/ComingSoonModal';
 
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
 interface ProvidersProps {
   children: ReactNode;
 }
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <ToastProvider>
-      <ConfirmProvider>
-        <AuthRequiredProvider>
-          <ComingSoonProvider>
-            {children}
-          </ComingSoonProvider>
-        </AuthRequiredProvider>
-      </ConfirmProvider>
-    </ToastProvider>
+    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AuthRequiredProvider>
+            <ComingSoonProvider>
+              {children}
+            </ComingSoonProvider>
+          </AuthRequiredProvider>
+        </ConfirmProvider>
+      </ToastProvider>
+    </NextThemesProvider>
   );
 }

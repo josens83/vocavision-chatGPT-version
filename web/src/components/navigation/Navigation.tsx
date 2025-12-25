@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, ReactNode, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { PLATFORM_STATS } from "@/constants/stats";
 import { useAuthStore } from "@/lib/store";
 import { useAuthRequired } from "@/components/ui/AuthRequiredModal";
@@ -480,6 +481,10 @@ export default function Navigation() {
   const { showAuthRequired } = useAuthRequired();
   const isAuthenticated = !!user;
 
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   // Mock streak - 실제로는 user 객체에서 가져와야 함
   const userStreak = (user as any)?.streak || 0;
 
@@ -532,11 +537,10 @@ export default function Navigation() {
 
   return (
     <header
-      className={`sticky top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${
-        isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-[0_4px_16px_rgba(15,23,42,0.08)] border-slate-200/80"
-          : "bg-white border-transparent"
-      }`}
+      className={`sticky top-0 left-0 right-0 z-40 transition-all duration-300 border-b border-transparent ${isScrolled
+        ? "bg-white/80 dark:bg-black/80 backdrop-blur-md shadow-sm border-slate-200/50 dark:border-white/10"
+        : "bg-white dark:bg-black/50 backdrop-blur-sm"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
@@ -545,7 +549,7 @@ export default function Navigation() {
               <span className="text-white font-display font-bold text-xl">V</span>
             </div>
             <span className="font-display font-bold text-xl">
-              <span className="text-gradient">Voca</span><span className="text-slate-700">Vision</span><span className="text-slate-400 ml-1">AI</span>
+              <span className="text-gradient">Voca</span><span className="text-slate-700 dark:text-white">Vision</span><span className="text-slate-400 ml-1">AI</span>
             </span>
             {/* 태그라인 - 데스크톱만 표시 */}
             <div className="hidden lg:flex items-center gap-2 ml-1 pl-3 border-l border-gray-300">
@@ -562,7 +566,7 @@ export default function Navigation() {
                 <button
                   key={item.label}
                   className="nav-link flex items-center gap-1.5 text-slate-400 cursor-default whitespace-nowrap"
-                  onClick={() => {}}
+                  onClick={() => { }}
                 >
                   <span>{item.label}</span>
                   <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full">준비중</span>
@@ -579,6 +583,25 @@ export default function Navigation() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            {mounted && (
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10 transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  </svg>
+                )}
+              </button>
+            )}
+
             {/* 검색 버튼 */}
             <button
               onClick={() => setIsSearchOpen(true)}
@@ -670,13 +693,12 @@ export default function Navigation() {
                     <div className="px-4 py-3 border-b border-slate-100">
                       <p className="text-sm font-medium text-slate-900">{user.name}</p>
                       <p className="text-xs text-slate-500 truncate">{user.email}</p>
-                      <span className={`inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
-                        user.subscriptionStatus === 'ACTIVE'
-                          ? 'bg-green-100 text-green-700'
-                          : user.subscriptionStatus === 'TRIAL'
+                      <span className={`inline-block mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${user.subscriptionStatus === 'ACTIVE'
+                        ? 'bg-green-100 text-green-700'
+                        : user.subscriptionStatus === 'TRIAL'
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-slate-100 text-slate-600'
-                      }`}>
+                        }`}>
                         {user.subscriptionStatus === 'ACTIVE' && '프리미엄'}
                         {user.subscriptionStatus === 'TRIAL' && '무료 체험'}
                         {user.subscriptionStatus === 'FREE' && '무료'}
