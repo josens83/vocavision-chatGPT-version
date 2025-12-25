@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PLATFORM_STATS } from "@/constants/stats";
@@ -59,6 +60,17 @@ export default function Hero() {
   return (
     <section className="relative min-h-[70vh] flex items-center overflow-hidden">
       <div className="absolute inset-0 hero-gradient hero-pattern" />
+      <Image
+        src="/hero-grid.svg"
+        alt=""
+        fill
+        priority={false}
+        loading="lazy"
+        sizes="100vw"
+        className="object-cover opacity-70"
+        aria-hidden
+        role="presentation"
+      />
       <div className="absolute top-20 left-10 w-72 h-72 bg-level-beginner/10 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-level-intermediate/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-level-advanced/5 rounded-full blur-3xl" />
@@ -88,22 +100,38 @@ export default function Hero() {
             <div className="flex flex-wrap gap-4 pt-4">
               {isLoggedIn ? (
                 <>
-                  <Link href="/study" className="btn btn-primary group">
+                  <Link
+                    href="/study"
+                    className="btn btn-primary group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                    aria-label="학습 시작하기"
+                  >
                     <Icons.Play />
                     <span>학습 시작하기</span>
                   </Link>
-                  <Link href="/review?exam=CSAT" className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5">
+                  <Link
+                    href="/review?exam=CSAT"
+                    className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                    aria-label="복습으로 이동"
+                  >
                     <Icons.BookOpen />
                     <span>복습하기</span>
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/learn?exam=CSAT&demo=1" className="btn btn-primary group">
+                  <Link
+                    href="/learn?exam=CSAT&demo=1"
+                    className="btn btn-primary group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                    aria-label="60초 맛보기 시작"
+                  >
                     <Icons.Play />
                     <span>60초 맛보기</span>
                   </Link>
-                  <Link href="/auth/login" className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5">
+                  <Link
+                    href="/auth/login"
+                    className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                    aria-label="무료 회원가입으로 이동"
+                  >
                     <Icons.Sparkles />
                     <span>무료 회원가입</span>
                   </Link>
@@ -150,7 +178,11 @@ export default function Hero() {
                 <div className="relative z-10">
                   <h4 className="text-lg font-semibold mb-2">60초 안에 체험해보세요!</h4>
                   <p className="text-white/80 mb-4">회원가입 없이 샘플 단어로 빠르게 체험</p>
-                  <Link href="/learn?exam=CSAT&demo=1" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-brand-primary hover:bg-white/90 rounded-lg font-medium transition-colors group">
+                  <Link
+                    href="/learn?exam=CSAT&demo=1"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white text-brand-primary hover:bg-white/90 rounded-lg font-medium transition-colors group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
+                    aria-label="맛보기 체험 시작"
+                  >
                     <span>맛보기 시작</span>
                     <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -164,7 +196,11 @@ export default function Hero() {
                 <div className="relative z-10">
                   <h4 className="text-lg font-semibold mb-2">오늘의 학습 목표</h4>
                   <p className="text-white/80 mb-4">새로운 단어 10개를 학습하고 복습 퀴즈를 완료해보세요!</p>
-                  <Link href="/quiz" className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors group">
+                  <Link
+                    href="/quiz"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    aria-label="퀴즈 시작"
+                  >
                     <span>퀴즈 시작</span>
                     <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />

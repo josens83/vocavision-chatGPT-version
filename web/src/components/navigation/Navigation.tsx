@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, ReactNode, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -548,10 +549,13 @@ export default function Navigation() {
                   className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
                 >
                   {user.avatar ? (
-                    <img
+                    <Image
                       src={user.avatar}
                       alt={user.name || '사용자'}
-                      className="w-8 h-8 rounded-full object-cover border-2 border-slate-200"
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover border-2 border-slate-200"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-brand-primary/10 flex items-center justify-center">
