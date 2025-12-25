@@ -590,6 +590,41 @@ export default function Navigation() {
               <kbd className="hidden md:inline-block px-1.5 py-0.5 text-xs bg-white rounded border border-slate-200 text-slate-400">⌘K</kbd>
             </button>
 
+            {/* 고객센터 / FAQ / 챗봇 바로가기 */}
+            <Link
+              href="/chat"
+              className="relative hidden md:flex items-center gap-2 px-3 py-1.5 border border-brand-primary/30 text-brand-primary rounded-lg bg-brand-primary/5 hover:bg-brand-primary/10 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01m-8 4h5m-7 8l1.664-3.328A7 7 0 015 9a7 7 0 1113.304 2.695"
+                />
+              </svg>
+              <span className="text-sm font-medium">고객센터</span>
+              <span className="text-xs text-slate-500 hidden lg:inline">FAQ · 챗봇</span>
+              <span className="absolute -top-2 -right-2 bg-emerald-100 text-emerald-700 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+                실시간 응답
+              </span>
+            </Link>
+
+            <Link
+              href="/chat"
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
+              aria-label="고객센터 및 FAQ"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01m-8 4h5m-7 8l1.664-3.328A7 7 0 015 9a7 7 0 1113.304 2.695"
+                />
+              </svg>
+            </Link>
+
             {/* 로그인 시 스트릭 표시 */}
             {isAuthenticated && <HeaderStreak streak={userStreak} />}
 
