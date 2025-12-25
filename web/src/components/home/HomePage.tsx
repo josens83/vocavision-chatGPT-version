@@ -6,12 +6,16 @@ import ExamIconGrid from "./ExamIconGrid";
 import HeroCarousel from "./HeroCarousel";
 import ProductPackageSection from "./ProductPackageSection";
 import PopularWordsSection from "./PopularWordsSection";
+import { LearningFlowSection } from "./LearningFlowSection";
 import { LazySection } from "@/components/ui/LazySection";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <Hero />
+
+      {/* 학습 → 테스트 → 복습 → 성과 확인 흐름 */}
+      <LearningFlowSection />
 
       {/* D-Day 카운트다운 배너 */}
       <DDayBanner />

@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
+import {
+  getStoredQuickStartMode,
+  isQuickStartEnabled,
+  markQuickStartRouted,
+  queueQuickStartPrompt,
+  QUICK_START_DESTINATIONS,
+} from '@/lib/quickStart';
 import { validateEmail, validatePassword, validateName, validateForm } from '@/lib/validation';
 import { FormInput, FormError, SubmitButton } from '@/components/ui/FormInput';
 
@@ -80,7 +87,18 @@ export default function RegisterPage() {
     try {
       const response = await authAPI.register(formData);
       setAuth(response.user, response.token);
-      router.push('/dashboard');
+      if (isQuickStartEnabled()) {
+        const preferredMode = getStoredQuickStartMode();
+        if (preferredMode) {
+          markQuickStartRouted();
+          router.push(QUICK_START_DESTINATIONS[preferredMode].href);
+        } else {
+          queueQuickStartPrompt();
+          router.push('/dashboard');
+        }
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       const errorMessage = err.response?.data?.error || '회원가입에 실패했습니다. 다시 시도해주세요.';
       if (errorMessage.toLowerCase().includes('email') || errorMessage.includes('이메일')) {
