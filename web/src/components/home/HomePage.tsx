@@ -6,18 +6,27 @@ import ExamIconGrid from "./ExamIconGrid";
 import HeroCarousel from "./HeroCarousel";
 import ProductPackageSection from "./ProductPackageSection";
 import PopularWordsSection from "./PopularWordsSection";
+import { LearningFlowSection } from "./LearningFlowSection";
 import { LazySection } from "@/components/ui/LazySection";
+import { CommunityFeedbackSection } from "./CommunityFeedback";
+import { SupportFloatingButton } from "@/components/ui/SupportFloatingButton";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       <Hero />
 
+      {/* 학습 → 테스트 → 복습 → 성과 확인 흐름 */}
+      <LearningFlowSection />
+
       {/* D-Day 카운트다운 배너 */}
       <DDayBanner />
 
       {/* 단품 패키지 섹션 - 나에게 딱 맞는 단어장 */}
       <ProductPackageSection />
+
+      {/* 실사용자 후기 및 후원 지표 */}
+      <CommunityFeedbackSection />
 
       {/* Hero Carousel - 프로모션/공지 슬라이드 */}
       <section className="py-8 px-6">
@@ -61,6 +70,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <SupportFloatingButton />
     </div>
   );
 }

@@ -29,83 +29,133 @@ export interface NavSubItem {
   requiresAuth?: boolean;
 }
 
-// Guest용 네비게이션 (시험 카테고리 중심)
+const LearningIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+    />
+  </svg>
+);
+
+const TestIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+  </svg>
+);
+
+const PricingIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
+  </svg>
+);
+
+const SupportIcon = (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M7 8h10M7 12h6m-6 4h4m9 0a2 2 0 01-2 2H6l-4 4V4a2 2 0 012-2h16a2 2 0 012 2v12z"
+    />
+  </svg>
+);
+
+const learningChildren = [
+  { label: "수능 단어 학습", href: "/learn?exam=CSAT", count: PLATFORM_STATS.totalWords, description: "레벨별 필수 어휘" },
+  {
+    label: "TEPS 단어 학습",
+    href: "/learn?exam=TEPS",
+    count: PLATFORM_STATS.exams.TEPS.words,
+    description: "프리미엄 TEPS 어휘",
+    badge: "Premium",
+  },
+  { label: "전체 단어 보기", href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, description: "무료 단어 전체" },
+];
+
+const testChildren = [
+  { label: "단어 퀴즈", href: "/quiz?exam=CSAT", description: "시험 대비 4지선다 테스트" },
+  { label: "오답 복습", href: "/review?exam=CSAT", description: "틀린 단어 다시 보기", requiresAuth: true },
+  { label: "학습 통계", href: "/stats", description: "완주율과 성과 확인", requiresAuth: true },
+];
+
+// Guest용 네비게이션 (우선순위 정렬)
 export const guestNavigationItems: NavItem[] = [
   {
-    label: "수능",
+    label: "단어학습",
     color: "text-blue-600",
-    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
-    children: [
-      { label: "L1 기초", href: "/learn?exam=CSAT&level=L1", count: PLATFORM_STATS.levels.L1, description: "수능 기본 필수 어휘" },
-      { label: "L2 중급", href: "/learn?exam=CSAT&level=L2", count: PLATFORM_STATS.levels.L2, description: "실력 향상 어휘" },
-      { label: "L3 고급", href: "/learn?exam=CSAT&level=L3", count: PLATFORM_STATS.levels.L3, description: "1등급 목표 어휘" },
-      { label: "전체 단어", href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, description: "수능 어휘 전체 보기" },
-    ],
+    icon: LearningIcon,
+    children: learningChildren,
   },
   {
-    label: "TEPS",
-    href: "#",
-    color: "text-slate-400",
-  },
-  {
-    label: "TOEFL",
-    href: "#",
-    color: "text-slate-400",
+    label: "테스트",
+    color: "text-purple-600",
+    icon: TestIcon,
+    children: testChildren,
   },
   {
     label: "요금제",
     href: "/pricing",
-    color: "text-purple-600",
-    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    color: "text-orange-500",
+    icon: PricingIcon,
+  },
+  {
+    label: "고객지원",
+    href: "/contact",
+    color: "text-slate-600",
+    icon: SupportIcon,
   },
 ];
 
-// 로그인 사용자용 네비게이션 (콘텐츠 중심 - 시험별 접근)
+// 로그인 사용자용 네비게이션 (우선순위 정렬)
 // "사용자는 'TOEIC 단어 공부하러 왔다'지, '플래시카드 하러 왔다'가 아님"
 export const authNavigationItems: NavItem[] = [
   {
-    label: "수능",
+    label: "단어학습",
     color: "text-blue-600",
-    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
+    icon: LearningIcon,
     children: [
-      { label: "L1 기초", href: "/learn?exam=CSAT&level=L1", count: PLATFORM_STATS.levels.L1, description: "수능 기본 필수 어휘" },
-      { label: "L2 중급", href: "/learn?exam=CSAT&level=L2", count: PLATFORM_STATS.levels.L2, description: "실력 향상 어휘" },
-      { label: "L3 고급", href: "/learn?exam=CSAT&level=L3", count: PLATFORM_STATS.levels.L3, description: "1등급 목표 어휘" },
-      { label: "퀴즈 풀기", href: "/quiz?exam=CSAT", description: "수능 단어 퀴즈", badge: "추천" },
-      { label: "복습하기", href: "/review?exam=CSAT", description: "틀린 단어 복습" },
-      { label: "전체 보기", href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, description: "수능 어휘 전체" },
+      { label: "수능 레벨별 학습", href: "/learn?exam=CSAT", count: PLATFORM_STATS.totalWords, description: "L1~L3 단어" },
+      {
+        label: "TEPS 단어 학습",
+        href: "/learn?exam=TEPS",
+        count: PLATFORM_STATS.exams.TEPS.words,
+        description: "프리미엄 어휘",
+        badge: "Premium",
+      },
+      { label: "학습 기록으로 이동", href: "/review", description: "복습 노트" },
+      { label: "전체 보기", href: "/words?exam=CSAT", count: PLATFORM_STATS.totalWords, description: "무료 단어 전체" },
     ],
   },
   {
-    label: "TEPS",
-    color: "text-teal-600",
-    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>,
-    children: [
-      { label: "TEPS 단어 학습", href: "/learn?exam=TEPS", count: PLATFORM_STATS.exams.TEPS.words, description: "TEPS 필수 어휘", badge: "Premium" },
-      { label: "TEPS 퀴즈", href: "/quiz?exam=TEPS", description: "TEPS 단어 퀴즈" },
-      { label: "전체 보기", href: "/words?exam=TEPS", count: PLATFORM_STATS.exams.TEPS.words, description: "TEPS 어휘 전체" },
-    ],
-  },
-  {
-    label: "TOEFL",
-    href: "#",
-    color: "text-slate-400",
-  },
-  {
-    label: "내 학습",
+    label: "테스트",
     color: "text-purple-600",
-    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+    icon: TestIcon,
     children: [
+      { label: "단어 퀴즈", href: "/quiz?exam=CSAT", description: "수능·TEPS 대비" },
+      { label: "오답 복습", href: "/review?exam=CSAT", description: "틀린 단어 복습" },
+      { label: "학습 통계", href: "/stats", description: "완주율과 성과" },
       { label: "대시보드", href: "/dashboard", description: "오늘의 학습 현황" },
-      { label: "복습 노트", href: "/review", description: "틀린 단어 모아보기" },
-      { label: "학습 통계", href: "/stats", description: "상세 학습 분석" },
     ],
   },
   {
     label: "요금제",
     href: "/pricing",
     color: "text-orange-500",
-    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    icon: PricingIcon,
+  },
+  {
+    label: "고객지원",
+    href: "/contact",
+    color: "text-slate-600",
+    icon: SupportIcon,
   },
 ];
 
@@ -481,7 +531,13 @@ export default function Navigation() {
   };
 
   return (
-    <header className={`sticky top-0 left-0 right-0 z-40 transition-all duration-300 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-white"}`}>
+    <header
+      className={`sticky top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${
+        isScrolled
+          ? "bg-white/95 backdrop-blur-md shadow-[0_4px_16px_rgba(15,23,42,0.08)] border-slate-200/80"
+          : "bg-white border-transparent"
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2">
@@ -534,6 +590,41 @@ export default function Navigation() {
               <span className="text-sm">검색</span>
               <kbd className="hidden md:inline-block px-1.5 py-0.5 text-xs bg-white rounded border border-slate-200 text-slate-400">⌘K</kbd>
             </button>
+
+            {/* 고객센터 / FAQ / 챗봇 바로가기 */}
+            <Link
+              href="/chat"
+              className="relative hidden md:flex items-center gap-2 px-3 py-1.5 border border-brand-primary/30 text-brand-primary rounded-lg bg-brand-primary/5 hover:bg-brand-primary/10 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01m-8 4h5m-7 8l1.664-3.328A7 7 0 015 9a7 7 0 1113.304 2.695"
+                />
+              </svg>
+              <span className="text-sm font-medium">고객센터</span>
+              <span className="text-xs text-slate-500 hidden lg:inline">FAQ · 챗봇</span>
+              <span className="absolute -top-2 -right-2 bg-emerald-100 text-emerald-700 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+                실시간 응답
+              </span>
+            </Link>
+
+            <Link
+              href="/chat"
+              className="md:hidden flex items-center justify-center w-10 h-10 rounded-xl bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
+              aria-label="고객센터 및 FAQ"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01m-8 4h5m-7 8l1.664-3.328A7 7 0 015 9a7 7 0 1113.304 2.695"
+                />
+              </svg>
+            </Link>
 
             {/* 로그인 시 스트릭 표시 */}
             {isAuthenticated && <HeaderStreak streak={userStreak} />}
@@ -673,7 +764,7 @@ export default function Navigation() {
                 )}
               </div>
             ) : (
-              <Link href="/auth/login" className="btn btn-primary py-2 hidden sm:flex">시작하기</Link>
+              <Link href="/auth/login" className="btn btn-primary py-2 hidden sm:flex">시작하기(무료)</Link>
             )}
 
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors lg:hidden">

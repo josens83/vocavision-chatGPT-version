@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PLATFORM_STATS } from "@/constants/stats";
+import { landingLocales } from "@/constants/landingContent";
 import { useAuthStore } from "@/lib/store";
 
 const Icons = {
@@ -42,10 +43,18 @@ const stats = [
   { label: "학습 모드", value: String(PLATFORM_STATS.learningModes), suffix: "가지" },
 ];
 
-const features = [
-  { icon: Icons.BookOpen, title: "스마트 플래시카드", description: "과학적 간격 반복으로 효율적 암기" },
-  { icon: Icons.Brain, title: "적응형 퀴즈", description: "오답 기반 난이도 조절 시스템" },
-  { icon: Icons.ChartBar, title: "학습 분석", description: "상세한 진도 추적과 통계 제공" },
+const { hero } = landingLocales.ko;
+
+const featureIcons = [Icons.BookOpen, Icons.Brain, Icons.ChartBar];
+const features = hero.features.map((feature, index) => ({
+  ...feature,
+  icon: featureIcons[index] ?? Icons.BookOpen,
+}));
+
+const socialProof = [
+  { text: "매일 10분, 무료 체험으로 시작한 학습자들이 테스트까지 완주하고 있어요." },
+  { text: "수능·TEPS 단어를 한 번에 준비한 학습자들이 ‘다시 돌아오게 된다’고 말해요." },
+  { text: "오답 복습과 통계까지 이어지는 흐름 덕분에 학습 리듬이 쉽게 무너지지 않아요." },
 ];
 
 export default function Hero() {
@@ -58,7 +67,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative min-h-[70vh] flex items-center overflow-hidden">
+    <section className="relative min-h-[65vh] md:min-h-[75vh] flex items-center overflow-hidden">
       <div className="absolute inset-0 hero-gradient hero-pattern" />
       <Image
         src="/hero-grid.svg"
@@ -75,77 +84,72 @@ export default function Hero() {
       <div className="absolute bottom-20 right-10 w-96 h-96 bg-level-intermediate/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-level-advanced/5 rounded-full blur-3xl" />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          <div className={`space-y-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pt-12 pb-16 md:py-16">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className={`space-y-7 md:space-y-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm border border-surface-border shadow-sm">
               <Icons.Sparkles />
-              <span className="text-sm font-medium text-slate-600">스마트 영어 학습 플랫폼</span>
+              <span className="text-sm font-medium text-slate-600">{hero.badge}</span>
             </div>
 
             <h1 className="font-display">
               <span className="block text-[1.75rem] sm:text-4xl md:text-display-lg text-slate-900 whitespace-nowrap">
-                영어 단어 학습의
+                {hero.headline.primary}
               </span>
               <span className="block text-[1.75rem] sm:text-4xl md:text-display-xl text-gradient whitespace-nowrap">
-                새로운 비전
+                {hero.headline.secondary}
               </span>
             </h1>
 
             <p className="text-lg md:text-xl text-slate-600 max-w-xl leading-relaxed">
-              과학적으로 검증된 <strong className="text-slate-800">간격 반복 학습</strong>과{' '}
-              <strong className="text-slate-800">적응형 퀴즈</strong>로 효율적인 어휘력 향상을 경험하세요.
+              {hero.description}
             </p>
 
             <div className="flex flex-wrap gap-4 pt-4">
               {isLoggedIn ? (
                 <>
-                  <Link
-                    href="/study"
-                    className="btn btn-primary group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-                    aria-label="학습 시작하기"
-                  >
+                  <Link href={hero.authCtas.primary.href} className="btn btn-primary group">
                     <Icons.Play />
-                    <span>학습 시작하기</span>
+                    <span>{hero.authCtas.primary.label}</span>
                   </Link>
                   <Link
-                    href="/review?exam=CSAT"
-                    className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-                    aria-label="복습으로 이동"
+                    href={hero.authCtas.secondary.href}
+                    className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5"
                   >
                     <Icons.BookOpen />
-                    <span>복습하기</span>
+                    <span>{hero.authCtas.secondary.label}</span>
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/learn?exam=CSAT&demo=1"
-                    className="btn btn-primary group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-                    aria-label="60초 맛보기 시작"
-                  >
+                  <Link href={hero.guestCtas.primary.href} className="btn btn-primary group">
                     <Icons.Play />
-                    <span>60초 맛보기</span>
+                    <span>{hero.guestCtas.primary.label}</span>
                   </Link>
                   <Link
-                    href="/auth/login"
-                    className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-                    aria-label="무료 회원가입으로 이동"
+                    href={hero.guestCtas.secondary.href}
+                    className="btn btn-outline text-brand-primary border-brand-primary hover:bg-brand-primary/5"
                   >
                     <Icons.Sparkles />
-                    <span>무료 회원가입</span>
+                    <span>{hero.guestCtas.secondary.label}</span>
                   </Link>
                 </>
               )}
             </div>
 
-            <div className="flex gap-8 pt-8 border-t border-slate-200">
-              {stats.map((stat, index) => (
-                <div key={stat.label} className={`${isVisible ? "animate-fade-in-up" : "opacity-0"}`} style={{ animationDelay: `${0.3 + index * 0.1}s` }}>
-                  <div className="text-3xl font-display font-bold text-slate-900">
-                    {stat.value}<span className="text-lg text-slate-500">{stat.suffix}</span>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pt-8 border-t border-slate-200">
+              {socialProof.map((item, index) => (
+                <div
+                  key={item.text}
+                  className={`flex items-start gap-3 rounded-xl bg-white/70 p-3 md:p-4 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.4)] ${
+                    isVisible ? "animate-fade-in-up" : "opacity-0"
+                  }`}
+                  style={{ animationDelay: `${0.25 + index * 0.08}s` }}
+                >
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary">
+                    <Icons.Sparkles />
                   </div>
-                  <div className="text-sm text-slate-500">{stat.label}</div>
+                  <p className="text-sm md:text-base text-slate-600 leading-relaxed">{item.text}</p>
                 </div>
               ))}
             </div>
@@ -176,14 +180,13 @@ export default function Hero() {
             {!isLoggedIn ? (
               <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-brand-primary to-brand-secondary text-white">
                 <div className="relative z-10">
-                  <h4 className="text-lg font-semibold mb-2">60초 안에 체험해보세요!</h4>
-                  <p className="text-white/80 mb-4">회원가입 없이 샘플 단어로 빠르게 체험</p>
+                  <h4 className="text-lg font-semibold mb-2">{hero.experienceCard.title}</h4>
+                  <p className="text-white/80 mb-4">{hero.experienceCard.description}</p>
                   <Link
-                    href="/learn?exam=CSAT&demo=1"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white text-brand-primary hover:bg-white/90 rounded-lg font-medium transition-colors group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
-                    aria-label="맛보기 체험 시작"
+                    href={hero.experienceCard.cta.href}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white text-brand-primary hover:bg-white/90 rounded-lg font-medium transition-colors group"
                   >
-                    <span>맛보기 시작</span>
+                    <span>{hero.experienceCard.cta.label}</span>
                     <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
@@ -194,14 +197,13 @@ export default function Hero() {
             ) : (
               <div className="relative overflow-hidden card p-6 bg-gradient-to-br from-brand-primary to-brand-primary/80 text-white">
                 <div className="relative z-10">
-                  <h4 className="text-lg font-semibold mb-2">오늘의 학습 목표</h4>
-                  <p className="text-white/80 mb-4">새로운 단어 10개를 학습하고 복습 퀴즈를 완료해보세요!</p>
+                  <h4 className="text-lg font-semibold mb-2">{hero.dailyGoalCard.title}</h4>
+                  <p className="text-white/80 mb-4">{hero.dailyGoalCard.description}</p>
                   <Link
-                    href="/quiz"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                    aria-label="퀴즈 시작"
+                    href={hero.dailyGoalCard.cta.href}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors group"
                   >
-                    <span>퀴즈 시작</span>
+                    <span>{hero.dailyGoalCard.cta.label}</span>
                     <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>

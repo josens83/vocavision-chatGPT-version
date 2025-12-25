@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, X, Sparkles, Crown, Zap } from "lucide-react";
+import { Check, X, Sparkles, Crown, Zap, ShieldCheck, Lock, RefreshCw } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 
 interface PlanFeature {
@@ -54,6 +54,30 @@ export default function PricingPage() {
 
   const currentPrices = prices[billingCycle];
   const isYearly = billingCycle === "yearly";
+
+  const trustSignals = [
+    {
+      title: "안전한 결제",
+      description: "토스페이먼츠 SSL 암호화로 카드 정보 보호",
+      icon: <ShieldCheck className="w-5 h-5" />,
+      href: "https://docs.tosspayments.com/resources/articles/security",
+      label: "보안 안내",
+    },
+    {
+      title: "쉬운 해지",
+      description: "대시보드에서 1클릭으로 구독 해지 가능",
+      icon: <Lock className="w-5 h-5" />,
+      href: "https://vocavision.kr/settings",
+      label: "해지 가이드",
+    },
+    {
+      title: "환불 정책",
+      description: "결제 7일 내 전액 환불, 이후 잔여 기간 환불",
+      icon: <RefreshCw className="w-5 h-5" />,
+      href: "https://vocavision.kr/terms",
+      label: "환불 규정",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-pink-50">
@@ -286,6 +310,51 @@ export default function PricingPage() {
                 <span>광고 없음</span>
               </li>
             </ul>
+          </div>
+        </div>
+
+        {/* 신뢰 아이콘 및 정책 안내 */}
+        <div className="mt-12">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">안심 결제 & 구독 정책</h3>
+                <p className="text-sm text-gray-600">보안, 환불, 해지 정보를 투명하게 안내합니다.</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                실시간 응답 상태
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {trustSignals.map((signal) => (
+                <a
+                  key={signal.title}
+                  href={signal.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-brand-primary/50 hover:shadow-md transition-colors"
+                >
+                  <div className="w-11 h-11 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center">
+                    {signal.icon}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{signal.title}</div>
+                    <div className="text-sm text-gray-600 leading-relaxed">{signal.description}</div>
+                    <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-primary">
+                      {signal.label}
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
 
