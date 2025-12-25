@@ -5,6 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
+import {
+  getStoredQuickStartMode,
+  isQuickStartEnabled,
+  markQuickStartRouted,
+  queueQuickStartPrompt,
+  QUICK_START_DESTINATIONS,
+} from '@/lib/quickStart';
 import { validateEmail, validatePassword, validateForm } from '@/lib/validation';
 import { FormInput, FormError, SubmitButton } from '@/components/ui/FormInput';
 import { getKakaoLoginUrl } from '@/lib/auth/kakao';
@@ -22,13 +29,22 @@ function LoginContent() {
   // URL 인코딩된 경우 디코딩 (예: %2Fcheckout%3Fpackage%3D... → /checkout?package=...)
   const decodedParam = nextParam ? decodeURIComponent(nextParam) : null;
   const nextUrl = decodedParam?.startsWith('/') ? decodedParam : '/my';
+  const isDefaultDestination = !nextParam || nextUrl === '/my';
 
   // 이미 로그인된 상태면 /my로 리다이렉트
   useEffect(() => {
     if (_hasHydrated && user) {
+      if (isQuickStartEnabled() && isDefaultDestination) {
+        const preferredMode = getStoredQuickStartMode();
+        if (preferredMode) {
+          markQuickStartRouted();
+          router.replace(QUICK_START_DESTINATIONS[preferredMode].href);
+          return;
+        }
+      }
       router.replace(nextUrl);
     }
-  }, [_hasHydrated, user, nextUrl, router]);
+  }, [_hasHydrated, isDefaultDestination, nextUrl, router, user]);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -95,6 +111,18 @@ function LoginContent() {
     try {
       const response = await authAPI.login(formData);
       setAuth(response.user, response.token);
+      if (isQuickStartEnabled() && isDefaultDestination) {
+        const preferredMode = getStoredQuickStartMode();
+        if (preferredMode) {
+          markQuickStartRouted();
+          router.push(QUICK_START_DESTINATIONS[preferredMode].href);
+        } else {
+          queueQuickStartPrompt();
+          router.push('/my');
+        }
+        return;
+      }
+
       router.push(nextUrl);
     } catch (err: any) {
       setServerError(err.response?.data?.error || '이메일 또는 비밀번호가 올바르지 않습니다');
